@@ -7,26 +7,37 @@
 <div class="mb-10 rounded-2xl bg-gradient-to-br from-brand-700 to-purple-900 p-5 sm:p-8 text-white shadow-lg">
     <h1 class="text-2xl font-bold mb-2">Ask Claude to build a collection</h1>
     <p class="text-purple-200 mb-6 text-sm">Describe the collection you want and AI will create it with posters and plot summaries.</p>
-    <form id="generate-form" class="flex flex-col sm:flex-row gap-3">
-        <input
-            type="text"
-            name="prompt"
-            id="gen-prompt"
-            placeholder='e.g. "Top 10 sci-fi movies from the 90s"'
-            required
-            class="flex-1 rounded-lg px-4 py-3 text-gray-900 placeholder-gray-500 bg-white/90 focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-500 text-sm"
-        >
-        <select name="movie_count" id="gen-count" class="rounded-lg px-4 py-3 text-gray-900 bg-white/90 focus:outline-none focus:ring-2 focus:ring-brand-500 text-sm">
-            <option value="5">5 movies</option>
-            <option value="10" selected>10 movies</option>
-            <option value="15">15 movies</option>
-            <option value="20">20 movies</option>
-            <option value="25">25 movies</option>
-        </select>
-        <button type="submit" id="gen-btn" class="rounded-lg bg-white text-brand-700 font-semibold px-6 py-3 hover:bg-gray-100 transition-colors text-sm flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed">
-            <span id="gen-btn-text">Generate</span>
-            <svg id="gen-spinner" class="hidden animate-spin w-4 h-4" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" fill="none"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
-        </button>
+    <form id="generate-form" class="space-y-3">
+        <div class="flex flex-col sm:flex-row gap-3">
+            <input
+                type="text"
+                name="prompt"
+                id="gen-prompt"
+                placeholder='e.g. "Top 10 sci-fi movies from the 90s"'
+                required
+                class="flex-1 rounded-lg px-4 py-3 text-gray-900 placeholder-gray-500 bg-white/90 focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-500 text-sm"
+            >
+            <select name="movie_count" id="gen-count" class="rounded-lg px-4 py-3 text-gray-900 bg-white/90 focus:outline-none focus:ring-2 focus:ring-brand-500 text-sm">
+                <option value="5">5 movies</option>
+                <option value="10" selected>10 movies</option>
+                <option value="15">15 movies</option>
+                <option value="20">20 movies</option>
+                <option value="25">25 movies</option>
+            </select>
+        </div>
+        <div class="flex flex-col sm:flex-row gap-3">
+            <input
+                type="text"
+                name="collection_name"
+                id="gen-name"
+                placeholder="Collection name (optional — AI will pick one)"
+                class="flex-1 rounded-lg px-4 py-3 text-gray-900 placeholder-gray-500 bg-white/90 focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-500 text-sm"
+            >
+            <button type="submit" id="gen-btn" class="rounded-lg bg-white text-brand-700 font-semibold px-6 py-3 hover:bg-gray-100 transition-colors text-sm flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed">
+                <span id="gen-btn-text">Generate</span>
+                <svg id="gen-spinner" class="hidden animate-spin w-4 h-4" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" fill="none"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
+            </button>
+        </div>
     </form>
     <p id="gen-error" class="mt-3 text-red-300 text-sm hidden"></p>
 </div>
@@ -122,7 +133,8 @@ document.getElementById('generate-form').addEventListener('submit', async (e) =>
             headers: {'Content-Type': 'application/json', ...flickvaultHeaders()},
             body: JSON.stringify({
                 prompt: document.getElementById('gen-prompt').value,
-                movie_count: parseInt(document.getElementById('gen-count').value)
+                movie_count: parseInt(document.getElementById('gen-count').value),
+                collection_name: document.getElementById('gen-name').value || null
             })
         });
         const data = await resp.json();

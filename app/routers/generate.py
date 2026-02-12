@@ -16,6 +16,7 @@ router = APIRouter(prefix="/api/collections", tags=["generate"])
 class GenerateRequest(BaseModel):
     prompt: str
     movie_count: int = 10
+    collection_name: str | None = None
 
 
 @router.post("/generate")
@@ -32,7 +33,7 @@ def generate(data: GenerateRequest, db: Session = Depends(get_db), keys: APIKeys
         raise HTTPException(status_code=400, detail=str(e))
 
     # Create the collection, handling duplicate names by appending a number
-    name = result["name"]
+    name = data.collection_name.strip() if data.collection_name and data.collection_name.strip() else result["name"]
     collection = None
     for attempt in range(20):
         try_name = name if attempt == 0 else f"{name} ({attempt + 1})"
