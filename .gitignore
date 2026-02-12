@@ -1,0 +1,11 @@
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+.venv/
+data/*.db
+data/*.db-wal
+data/*.db-shm
+.env
+.claude/
+REPO.md

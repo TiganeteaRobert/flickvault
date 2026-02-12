@@ -1,0 +1,95 @@
+import json
+
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
+from sqlalchemy.orm import Session
+
+from app.database import get_db
+from app.schemas import MovieCreate, MovieOut, MovieBatchCreate, MovieSearchResult
+from app import crud
+
+router = APIRouter(tags=["movies"])
+
+
+@router.post("/api/collections/{collection_id}/movies", response_model=MovieOut, status_code=201)
+def add_movie(collection_id: int, data: MovieCreate, db: Session = Depends(get_db)):
+    result = crud.add_movie_to_collection(db, collection_id, data)
+    if "error" in result:
+        raise HTTPException(status_code=404, detail=result["error"])
+    return result["movie"]
+
+
+@router.post("/api/collections/{collection_id}/movies/batch")
+def add_movies_batch(collection_id: int, data: MovieBatchCreate, db: Session = Depends(get_db)):
+    result = crud.add_movies_batch(db, collection_id, data.movies)
+    if "error" in result:
+        raise HTTPException(status_code=404, detail=result["error"])
+    return result
+
+
+@router.delete("/api/collections/{collection_id}/movies/{movie_id}", status_code=204)
+def remove_movie(collection_id: int, movie_id: int, db: Session = Depends(get_db)):
+    if not crud.remove_movie_from_collection(db, collection_id, movie_id):
+        raise HTTPException(status_code=404, detail="Movie not found in collection")
+
+
+@router.get("/api/movies/search", response_model=list[MovieSearchResult])
+def search_movies(q: str, db: Session = Depends(get_db)):
+    return crud.search_movies(db, q)
+
+
+@router.post("/api/collections/{collection_id}/import")
+async def import_json(collection_id: int, file: UploadFile = File(...), db: Session = Depends(get_db)):
+    content = await file.read()
+    try:
+        data = json.loads(content)
+    except json.JSONDecodeError:
+        raise HTTPException(status_code=400, detail="Invalid JSON file")
+
+    movies = _extract_movies_from_json(data)
+    if not movies:
+        raise HTTPException(status_code=400, detail="No movies found in JSON")
+
+    movie_creates = [MovieCreate(**m) for m in movies]
+    result = crud.add_movies_batch(db, collection_id, movie_creates)
+    if "error" in result:
+        raise HTTPException(status_code=404, detail=result["error"])
+    return result
+
+
+def _extract_movies_from_json(data: dict | list) -> list[dict]:
+    """Extract movie entries from various JSON formats (trakt watchlist, plain list, etc.)."""
+    if isinstance(data, list):
+        return _normalize_movie_list(data)
+
+    movies = []
+    # Support trakt-watchlist-pending.json format
+    for key in ("already_added", "remaining", "movies"):
+        if key in data and isinstance(data[key], list):
+            movies.extend(data[key])
+    if movies:
+        return _normalize_movie_list(movies)
+
+    # Single movie object
+    if "title" in data:
+        return _normalize_movie_list([data])
+
+    return []
+
+
+def _normalize_movie_list(items: list) -> list[dict]:
+    """Normalize movie entries to MovieCreate-compatible dicts."""
+    results = []
+    for item in items:
+        if not isinstance(item, dict):
+            continue
+        movie = {}
+        movie["title"] = item.get("title", "Unknown")
+        if "year" in item:
+            movie["year"] = item["year"]
+        for field in ("trakt_id", "imdb_id", "tmdb_id", "overview", "poster_url"):
+            if field in item and item[field] is not None:
+                movie[field] = str(item[field])
+        if "rating" in item and item["rating"] is not None:
+            movie["rating"] = float(item["rating"])
+        results.append(movie)
+    return results

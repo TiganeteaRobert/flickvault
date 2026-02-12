@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "flickvault": {
+      "command": "uv",
+      "args": ["--directory", "/Users/rtiganetea/movie-manager", "run", "python", "-m", "mcp_server.server"]
+    }
+  }
+}

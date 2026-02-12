@@ -1,0 +1,83 @@
+{% extends "base.html" %}
+
+{% block title %}Import — Flickvault{% endblock %}
+
+{% block content %}
+<a href="/" class="text-sm text-gray-500 dark:text-gray-400 hover:text-brand-600 dark:hover:text-brand-500 transition-colors mb-4 inline-block">&larr; All Collections</a>
+
+<h1 class="text-2xl font-bold mb-2">Import Movies from JSON</h1>
+<p class="text-gray-500 dark:text-gray-400 mb-6 text-sm">Upload a JSON file containing movie data. Supports trakt-watchlist format and plain arrays of movie objects.</p>
+
+{% if not collections %}
+<div class="rounded-lg bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 px-4 py-3 text-yellow-700 dark:text-yellow-300 text-sm">
+    No collections exist yet. <a href="/" class="font-medium underline">Create one first</a>.
+</div>
+{% else %}
+<div class="max-w-xl">
+    <form id="import-form" class="space-y-4">
+        <div>
+            <label for="collection" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Collection</label>
+            <select name="collection_id" id="collection" required
+                    class="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500">
+                {% for c in collections %}
+                <option value="{{ c.id }}">{{ c.name }} ({{ c.movie_count }} movies)</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div>
+            <label for="file" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">JSON File</label>
+            <input type="file" name="file" id="file" accept=".json" required
+                   class="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 px-4 py-2.5 text-sm file:mr-4 file:rounded-lg file:border-0 file:bg-brand-100 file:dark:bg-brand-900/40 file:text-brand-700 file:dark:text-brand-400 file:px-4 file:py-1.5 file:text-sm file:font-medium focus:outline-none focus:ring-2 focus:ring-brand-500">
+        </div>
+
+        <button type="submit" id="import-btn"
+                class="rounded-lg bg-brand-600 text-white font-medium px-6 py-2.5 hover:bg-brand-700 transition-colors text-sm flex items-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed">
+            <span id="import-btn-text">Import</span>
+            <svg id="import-spinner" class="hidden animate-spin w-4 h-4" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" fill="none"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
+        </button>
+    </form>
+
+    <div id="result" class="hidden mt-6 rounded-lg px-4 py-3 text-sm"></div>
+</div>
+
+<script>
+document.getElementById('import-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const form = e.target;
+    const collectionId = form.collection_id.value;
+    const formData = new FormData();
+    formData.append('file', form.file.files[0]);
+
+    const btn = document.getElementById('import-btn');
+    const btnText = document.getElementById('import-btn-text');
+    const spinner = document.getElementById('import-spinner');
+
+    btn.disabled = true;
+    btnText.textContent = 'Importing...';
+    spinner.classList.remove('hidden');
+
+    const resp = await fetch(`/api/collections/${collectionId}/import`, {
+        method: 'POST',
+        body: formData
+    });
+    const data = await resp.json();
+
+    btn.disabled = false;
+    btnText.textContent = 'Import';
+    spinner.classList.add('hidden');
+
+    const resultDiv = document.getElementById('result');
+    resultDiv.classList.remove('hidden', 'bg-green-50', 'dark:bg-green-900/20', 'border-green-200', 'dark:border-green-800', 'text-green-700', 'dark:text-green-300', 'bg-red-50', 'dark:bg-red-900/20', 'border-red-200', 'dark:border-red-800', 'text-red-700', 'dark:text-red-300');
+
+    if (resp.ok) {
+        resultDiv.classList.add('bg-green-50', 'dark:bg-green-900/20', 'border', 'border-green-200', 'dark:border-green-800', 'text-green-700', 'dark:text-green-300');
+        resultDiv.innerHTML = `<strong>${data.added}</strong> added, <strong>${data.skipped}</strong> already existed (${data.total} total). <a href="/collections/${collectionId}" class="font-medium underline">View collection</a>`;
+    } else {
+        resultDiv.classList.add('bg-red-50', 'dark:bg-red-900/20', 'border', 'border-red-200', 'dark:border-red-800', 'text-red-700', 'dark:text-red-300');
+        resultDiv.textContent = data.detail || 'Import failed';
+    }
+});
+</script>
+{% endif %}
+{% endblock %}
