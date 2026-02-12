@@ -26,22 +26,24 @@ def _get_db():
 # --- Tool 1: create_collection ---
 
 @mcp.tool()
-def create_collection(user_id: int, name: str, description: str = "") -> str:
-    """Create a new named movie collection.
+def create_collection(user_id: int, name: str, description: str = "", media_type: str = "movie") -> str:
+    """Create a new named collection for movies or TV shows.
 
     Args:
         user_id: ID of the authenticated user who owns this collection
         name: Unique name for the collection (unique per user)
         description: Optional description
+        media_type: Type of media — "movie" or "show" (default "movie")
     """
     db = _get_db()
     try:
-        data = CollectionCreate(name=name, description=description)
+        data = CollectionCreate(name=name, description=description, media_type=media_type)
         collection = crud.create_collection(db, data, user_id)
         return json.dumps({
             "id": collection.id,
             "name": collection.name,
             "description": collection.description,
+            "media_type": collection.media_type,
         })
     except Exception as e:
         return json.dumps({"error": str(e)})
@@ -53,7 +55,7 @@ def create_collection(user_id: int, name: str, description: str = "") -> str:
 
 @mcp.tool()
 def list_collections(user_id: int) -> str:
-    """List all movie collections with their movie counts for a user.
+    """List all collections (movies and TV shows) with their counts for a user.
 
     Args:
         user_id: ID of the authenticated user whose collections to list
@@ -66,6 +68,7 @@ def list_collections(user_id: int) -> str:
                 "id": c["id"],
                 "name": c["name"],
                 "description": c["description"],
+                "media_type": c["media_type"],
                 "movie_count": c["movie_count"],
             }
             for c in collections
@@ -86,24 +89,28 @@ def add_movie_to_collection(
     imdb_id: str | None = None,
     tmdb_id: str | None = None,
     overview: str = "",
+    media_type: str = "movie",
 ) -> str:
-    """Add a single movie to a collection. Deduplicates by trakt_id or imdb_id.
+    """Add a single movie or TV show to a collection. Deduplicates by trakt_id or imdb_id.
+    The media_type must match the collection's type.
 
     Args:
         user_id: ID of the authenticated user who owns the collection
         collection_id: ID of the collection to add to
-        title: Movie title
+        title: Movie or show title
         year: Release year
         trakt_id: Trakt ID for deduplication
         imdb_id: IMDb ID for deduplication
         tmdb_id: TMDb ID
-        overview: Movie overview/description
+        overview: Overview/description
+        media_type: Type of media — "movie" or "show" (default "movie")
     """
     db = _get_db()
     try:
         data = MovieCreate(
             title=title, year=year, trakt_id=trakt_id,
             imdb_id=imdb_id, tmdb_id=tmdb_id, overview=overview,
+            media_type=media_type,
         )
         result = crud.add_movie_to_collection(db, collection_id, data, user_id)
         if "error" in result:
@@ -144,7 +151,7 @@ def add_movies_batch(user_id: int, collection_id: int, movies_json: str) -> str:
 
 @mcp.tool()
 def list_movies_in_collection(user_id: int, collection_id: int) -> str:
-    """List all movies in a specific collection.
+    """List all movies or TV shows in a specific collection.
 
     Args:
         user_id: ID of the authenticated user who owns the collection
@@ -162,11 +169,13 @@ def list_movies_in_collection(user_id: int, collection_id: int) -> str:
                 "year": m.year,
                 "trakt_id": m.trakt_id,
                 "imdb_id": m.imdb_id,
+                "media_type": m.media_type,
             }
             for m in data["movies"]
         ]
         return json.dumps({
             "collection": data["name"],
+            "media_type": data["media_type"],
             "movie_count": data["movie_count"],
             "movies": movies,
         })
@@ -276,26 +285,28 @@ def import_from_json_file(user_id: int, collection_id: int, file_path: str) -> s
 # --- Tool 10: generate_collection ---
 
 @mcp.tool()
-def generate_collection(user_id: int, prompt: str, movie_count: int = 10) -> str:
-    """Generate a movie collection using AI. Describe the collection you want in natural language
-    and Claude will create it with matching movies, enriched with TMDB poster and plot data.
+def generate_collection(user_id: int, prompt: str, movie_count: int = 10, media_type: str = "movie") -> str:
+    """Generate a collection using AI. Describe the collection you want in natural language
+    and Claude will create it with matching movies or TV shows, enriched with TMDB poster and plot data.
 
     Args:
         user_id: ID of the authenticated user who will own the new collection
         prompt: Natural language description of the collection (e.g. "Top 10 sci-fi movies from the 90s")
-        movie_count: Number of movies to include (default 10)
+        movie_count: Number of items to include (default 10)
+        media_type: Type of media — "movie" or "show" (default "movie")
     """
     db = _get_db()
     try:
-        result = ai_generate_collection(prompt, movie_count)
+        result = ai_generate_collection(prompt, movie_count, media_type=media_type)
         collection = crud.create_collection(
-            db, CollectionCreate(name=result["name"], description=result["description"]), user_id
+            db, CollectionCreate(name=result["name"], description=result["description"], media_type=media_type), user_id
         )
         movie_creates = [MovieCreate(**m) for m in result["movies"]]
         batch_result = crud.add_movies_batch(db, collection.id, movie_creates, user_id)
         return json.dumps({
             "collection_id": collection.id,
             "collection_name": collection.name,
+            "media_type": media_type,
             "movies_added": batch_result.get("added", 0),
         })
     except ValueError as e:

@@ -23,6 +23,10 @@
                     required
                     class="flex-1 rounded-xl px-4 py-3 bg-white/[0.07] border border-white/[0.1] text-white placeholder-zinc-500 focus:border-brand-500/50 focus:bg-white/[0.1] transition-all text-sm"
                 >
+                <select name="media_type" id="gen-media-type" class="rounded-xl px-4 py-3 bg-white/[0.07] border border-white/[0.1] text-white focus:border-brand-500/50 transition-all text-sm appearance-none cursor-pointer">
+                    <option value="movie" selected>Movies</option>
+                    <option value="show">TV Shows</option>
+                </select>
                 <select name="movie_count" id="gen-count" class="rounded-xl px-4 py-3 bg-white/[0.07] border border-white/[0.1] text-white focus:border-brand-500/50 transition-all text-sm appearance-none cursor-pointer">
                     <option value="5">5 movies</option>
                     <option value="10" selected>10 movies</option>
@@ -76,6 +80,10 @@
                class="flex-1 rounded-xl bg-white/[0.04] border border-white/[0.08] px-4 py-2.5 text-sm text-zinc-200 placeholder-zinc-600 focus:border-brand-500/50 transition-colors">
         <input type="text" name="description" id="description" placeholder="Description (optional)"
                class="flex-1 rounded-xl bg-white/[0.04] border border-white/[0.08] px-4 py-2.5 text-sm text-zinc-200 placeholder-zinc-600 focus:border-brand-500/50 transition-colors">
+        <select name="media_type" id="create-media-type" class="rounded-xl bg-white/[0.04] border border-white/[0.08] px-4 py-2.5 text-sm text-zinc-200 focus:border-brand-500/50 transition-colors appearance-none cursor-pointer">
+            <option value="movie">Movies</option>
+            <option value="show">TV Shows</option>
+        </select>
         <button type="submit" class="rounded-xl bg-brand-500 text-surface-950 font-semibold px-6 py-2.5 hover:bg-brand-400 transition-colors text-sm btn-press">Create</button>
     </form>
 </div>
@@ -100,10 +108,19 @@
             <!-- Gradient overlay -->
             <div class="absolute inset-0 poster-overlay"></div>
 
-            <!-- Movie count pill -->
+            <!-- Count pill -->
             <span class="absolute top-3 left-3 inline-flex items-center rounded-full bg-black/50 backdrop-blur-md px-2.5 py-0.5 text-xs font-bold text-white/90 border border-white/[0.08]">
+                {% if c.media_type == "show" %}
+                {{ c.movie_count }} show{{ "s" if c.movie_count != 1 else "" }}
+                {% else %}
                 {{ c.movie_count }} movie{{ "s" if c.movie_count != 1 else "" }}
+                {% endif %}
             </span>
+
+            {% if c.media_type == "show" %}
+            <!-- TV badge -->
+            <span class="absolute top-3 left-auto right-12 inline-flex items-center rounded-full bg-indigo-500/70 backdrop-blur-md px-2 py-0.5 text-[10px] font-bold text-white border border-indigo-400/30">TV</span>
+            {% endif %}
 
             <!-- Delete button -->
             <button onclick="deleteCollection(event, {{ c.id }}, this)" class="absolute top-2.5 right-2.5 p-1.5 rounded-full bg-black/30 backdrop-blur-sm text-white/50 hover:text-white hover:bg-rose-500/80 opacity-0 group-hover:opacity-100 transition-all duration-300" title="Delete collection">
@@ -143,7 +160,7 @@ document.getElementById('new-collection-toggle').addEventListener('click', () =>
 document.getElementById('create-form').addEventListener('submit', async (e) => {
     e.preventDefault();
     const form = e.target;
-    const data = { name: form.name.value, description: form.description.value };
+    const data = { name: form.name.value, description: form.description.value, media_type: form.media_type.value };
     const resp = await fetch('/api/collections', {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
@@ -168,6 +185,17 @@ async function deleteCollection(e, id, btn) {
     }
 }
 
+// Dynamic count labels based on media type
+const genMediaType = document.getElementById('gen-media-type');
+const genCount = document.getElementById('gen-count');
+function updateCountLabels() {
+    const label = genMediaType.value === 'show' ? 'shows' : 'movies';
+    Array.from(genCount.options).forEach(opt => {
+        opt.textContent = `${opt.value} ${label}`;
+    });
+}
+genMediaType.addEventListener('change', updateCountLabels);
+
 // AI Generate
 document.getElementById('generate-form').addEventListener('submit', async (e) => {
     e.preventDefault();
@@ -188,7 +216,8 @@ document.getElementById('generate-form').addEventListener('submit', async (e) =>
             body: JSON.stringify({
                 prompt: document.getElementById('gen-prompt').value,
                 movie_count: parseInt(document.getElementById('gen-count').value),
-                collection_name: document.getElementById('gen-name').value || null
+                collection_name: document.getElementById('gen-name').value || null,
+                media_type: document.getElementById('gen-media-type').value
             })
         });
         const data = await resp.json();

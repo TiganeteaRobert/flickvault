@@ -17,6 +17,7 @@ class GenerateRequest(BaseModel):
     prompt: str
     movie_count: int = 10
     collection_name: str | None = None
+    media_type: str = "movie"
 
 
 @router.post("/generate")
@@ -28,6 +29,7 @@ def generate(data: GenerateRequest, db: Session = Depends(get_db), keys: APIKeys
             data.movie_count,
             anthropic_key=keys.anthropic_key,
             tmdb_key=keys.tmdb_key,
+            media_type=data.media_type,
         )
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
@@ -39,7 +41,7 @@ def generate(data: GenerateRequest, db: Session = Depends(get_db), keys: APIKeys
         try_name = name if attempt == 0 else f"{name} ({attempt + 1})"
         try:
             collection = crud.create_collection(
-                db, CollectionCreate(name=try_name, description=result["description"]), user.id
+                db, CollectionCreate(name=try_name, description=result["description"], media_type=data.media_type), user.id
             )
             break
         except IntegrityError:

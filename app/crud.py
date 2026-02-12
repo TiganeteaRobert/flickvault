@@ -8,7 +8,7 @@ from app.schemas import CollectionCreate, CollectionUpdate, MovieCreate
 # --- Collections ---
 
 def create_collection(db: Session, data: CollectionCreate, user_id: int) -> Collection:
-    collection = Collection(name=data.name, description=data.description, user_id=user_id)
+    collection = Collection(name=data.name, description=data.description, media_type=data.media_type, user_id=user_id)
     db.add(collection)
     db.commit()
     db.refresh(collection)
@@ -30,6 +30,7 @@ def get_collections(db: Session, user_id: int) -> list[dict]:
             "id": collection.id,
             "name": collection.name,
             "description": collection.description,
+            "media_type": collection.media_type,
             "created_at": collection.created_at,
             "updated_at": collection.updated_at,
             "movie_count": count,
@@ -86,6 +87,7 @@ def get_collection_with_movies(db: Session, collection_id: int, user_id: int) ->
         "id": collection.id,
         "name": collection.name,
         "description": collection.description,
+        "media_type": collection.media_type,
         "created_at": collection.created_at,
         "updated_at": collection.updated_at,
         "movie_count": len(movies),
@@ -154,6 +156,7 @@ def find_or_create_movie(db: Session, data: MovieCreate) -> Movie:
         overview=data.overview,
         poster_url=data.poster_url,
         rating=data.rating,
+        media_type=data.media_type,
     )
     db.add(movie)
     db.commit()
@@ -166,6 +169,9 @@ def add_movie_to_collection(db: Session, collection_id: int, data: MovieCreate, 
     collection = get_collection(db, collection_id, user_id)
     if not collection:
         return {"error": "Collection not found"}
+
+    if data.media_type != collection.media_type:
+        return {"error": f"Cannot add a {data.media_type} to a {collection.media_type} collection"}
 
     movie = find_or_create_movie(db, data)
 

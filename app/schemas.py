@@ -28,6 +28,7 @@ class UserOut(BaseModel):
 class CollectionCreate(BaseModel):
     name: str
     description: str = ""
+    media_type: str = "movie"
 
 
 class CollectionUpdate(BaseModel):
@@ -39,6 +40,7 @@ class CollectionOut(BaseModel):
     id: int
     name: str
     description: str
+    media_type: str
     created_at: datetime
     updated_at: datetime
     movie_count: int = 0
@@ -57,6 +59,7 @@ class MovieCreate(BaseModel):
     overview: str = ""
     poster_url: str = ""
     rating: float | None = None
+    media_type: str = "movie"
 
 
 class MovieOut(BaseModel):
@@ -69,6 +72,7 @@ class MovieOut(BaseModel):
     overview: str
     poster_url: str
     rating: float | None
+    media_type: str
     created_at: datetime
 
     model_config = {"from_attributes": True}

@@ -9,8 +9,8 @@
 </a>
 
 <div class="mb-8">
-    <h1 class="text-2xl sm:text-3xl font-extrabold text-zinc-100 mb-2">Import Movies</h1>
-    <p class="text-zinc-500 text-sm">Upload a JSON file with movie data. Supports Trakt watchlist format and plain arrays.</p>
+    <h1 class="text-2xl sm:text-3xl font-extrabold text-zinc-100 mb-2">Import</h1>
+    <p class="text-zinc-500 text-sm">Upload a JSON file with movie or TV show data. Supports Trakt watchlist format and plain arrays.</p>
 </div>
 
 {% if not collections %}
@@ -26,7 +26,7 @@
                 <select name="collection_id" id="collection" required
                         class="w-full rounded-xl bg-white/[0.04] border border-white/[0.08] px-4 py-2.5 text-sm text-zinc-200 focus:border-brand-500/50 transition-colors appearance-none cursor-pointer">
                     {% for c in collections %}
-                    <option value="{{ c.id }}">{{ c.name }} ({{ c.movie_count }} movies)</option>
+                    <option value="{{ c.id }}">{{ c.name }} ({{ c.movie_count }} {{ "shows" if c.media_type == "show" else "movies" }})</option>
                     {% endfor %}
                 </select>
             </div>

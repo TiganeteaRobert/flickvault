@@ -16,7 +16,11 @@
         </div>
         <div class="flex items-center gap-3 shrink-0">
             <span class="inline-flex items-center rounded-full bg-brand-500/10 border border-brand-500/20 px-3.5 py-1 text-sm font-bold text-brand-400">
+                {% if collection.media_type == "show" %}
+                {{ collection.movie_count }} show{{ "s" if collection.movie_count != 1 else "" }}
+                {% else %}
                 {{ collection.movie_count }} movie{{ "s" if collection.movie_count != 1 else "" }}
+                {% endif %}
             </span>
             <button id="delete-toggle" class="text-sm font-medium text-zinc-500 hover:text-rose-400 transition-colors">Delete</button>
         </div>
@@ -126,8 +130,11 @@
                 <!-- Tagline -->
                 <p id="modal-tagline" class="px-6 mt-3 text-sm italic text-zinc-500"></p>
 
-                <!-- Director -->
+                <!-- Director / Creator -->
                 <p id="modal-director" class="px-6 mt-2 text-sm text-zinc-400"></p>
+
+                <!-- Seasons/Episodes (shows only) -->
+                <p id="modal-seasons" class="hidden px-6 mt-1 text-sm text-zinc-400"></p>
 
                 <!-- Overview -->
                 <p id="modal-overview" class="px-6 mt-3 text-sm text-zinc-300 leading-relaxed"></p>
@@ -157,8 +164,8 @@
     <div class="inline-flex items-center justify-center w-20 h-20 rounded-full bg-white/[0.03] mb-5">
         <span class="text-4xl">🎬</span>
     </div>
-    <p class="text-lg font-semibold text-zinc-300 mb-2">No movies yet</p>
-    <p class="text-sm text-zinc-500">Add movies via the API, MCP tools, or <a href="/import" class="text-brand-400 hover:text-brand-300 font-medium transition-colors">import a JSON file</a>.</p>
+    <p class="text-lg font-semibold text-zinc-300 mb-2">No {{ "shows" if collection.media_type == "show" else "movies" }} yet</p>
+    <p class="text-sm text-zinc-500">Add {{ "shows" if collection.media_type == "show" else "movies" }} via the API, MCP tools, or <a href="/import" class="text-brand-400 hover:text-brand-300 font-medium transition-colors">import a JSON file</a>.</p>
 </div>
 {% endif %}
 
@@ -191,6 +198,7 @@ const modalLoading = document.getElementById('modal-loading');
 const modalBody = document.getElementById('modal-body');
 let currentMovieTitle = '';
 let currentMovieYear = null;
+let currentMediaType = '{{ collection.media_type }}';
 
 async function openMovieModal(movieId) {
     movieModal.classList.remove('hidden');
@@ -276,13 +284,27 @@ async function openMovieModal(movieId) {
             taglineEl.classList.add('hidden');
         }
 
-        // Director
+        // Director / Creator
         const directorEl = document.getElementById('modal-director');
-        if (m.director) {
+        if (m.media_type === 'show' && m.creator) {
+            directorEl.innerHTML = `Created by <strong class="text-zinc-200">${escapeHtml(m.creator)}</strong>`;
+            directorEl.classList.remove('hidden');
+        } else if (m.director) {
             directorEl.innerHTML = `Directed by <strong class="text-zinc-200">${escapeHtml(m.director)}</strong>`;
             directorEl.classList.remove('hidden');
         } else {
             directorEl.classList.add('hidden');
+        }
+
+        // Seasons / Episodes (shows only)
+        const seasonsEl = document.getElementById('modal-seasons');
+        if (m.media_type === 'show' && m.number_of_seasons) {
+            let txt = `${m.number_of_seasons} season${m.number_of_seasons !== 1 ? 's' : ''}`;
+            if (m.number_of_episodes) txt += ` · ${m.number_of_episodes} episodes`;
+            seasonsEl.textContent = txt;
+            seasonsEl.classList.remove('hidden');
+        } else {
+            seasonsEl.classList.add('hidden');
         }
 
         // Overview
@@ -326,7 +348,8 @@ async function openMovieModal(movieId) {
             imdbLink.classList.add('hidden');
         }
         if (m.tmdb_id) {
-            tmdbLink.href = `https://www.themoviedb.org/movie/${m.tmdb_id}`;
+            const tmdbType = m.media_type === 'show' ? 'tv' : 'movie';
+            tmdbLink.href = `https://www.themoviedb.org/${tmdbType}/${m.tmdb_id}`;
             tmdbLink.classList.remove('hidden');
         } else {
             tmdbLink.classList.add('hidden');
@@ -346,14 +369,17 @@ async function findSimilarMovies() {
     btn.innerHTML = `<svg class="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg> Generating...`;
 
     const yearStr = currentMovieYear ? ` (${currentMovieYear})` : '';
-    const prompt = `10 movies similar to "${currentMovieTitle}"${yearStr}. Include movies with similar themes, tone, and style.`;
-    const collectionName = `Movies Like ${currentMovieTitle}${yearStr}`;
+    const isShow = currentMediaType === 'show';
+    const itemLabel = isShow ? 'TV shows' : 'movies';
+    const nameLabel = isShow ? 'Shows' : 'Movies';
+    const prompt = `10 ${itemLabel} similar to "${currentMovieTitle}"${yearStr}. Include ${itemLabel} with similar themes, tone, and style.`;
+    const collectionName = `${nameLabel} Like ${currentMovieTitle}${yearStr}`;
 
     try {
         const resp = await fetch('/api/collections/generate', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ prompt, movie_count: 10, collection_name: collectionName }),
+            body: JSON.stringify({ prompt, movie_count: 10, collection_name: collectionName, media_type: currentMediaType }),
         });
         if (!resp.ok) {
             const err = await resp.json().catch(() => ({}));
@@ -364,7 +390,7 @@ async function findSimilarMovies() {
     } catch (e) {
         btn.innerHTML = origHtml;
         btn.disabled = false;
-        alert(e.message || 'Failed to generate similar movies. Check your API keys in settings.');
+        alert(e.message || 'Failed to generate similar items. Check your API keys in settings.');
     }
 }
 

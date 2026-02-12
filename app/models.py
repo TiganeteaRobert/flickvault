@@ -28,6 +28,7 @@ class Collection(Base):
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String(255), nullable=False)
     description = Column(Text, default="")
+    media_type = Column(String(10), nullable=False, default="movie")
     user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
     updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc),
@@ -51,6 +52,7 @@ class Movie(Base):
     overview = Column(Text, default="")
     poster_url = Column(String(500), default="")
     rating = Column(Float, nullable=True)
+    media_type = Column(String(10), nullable=False, default="movie")
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
     collection_movies = relationship("CollectionMovie", back_populates="movie")
