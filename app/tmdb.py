@@ -52,6 +52,60 @@ def search_movie(title: str, year: int | None = None, api_key: str | None = None
         return None
 
 
+def get_movie_details(tmdb_id: str, api_key: str | None = None) -> dict | None:
+    """Fetch enriched movie details (genres, runtime, cast, etc.) from TMDB.
+
+    Returns None on failure.
+    """
+    key = api_key or TMDB_API_KEY
+    if not key:
+        return None
+
+    try:
+        resp = httpx.get(
+            f"{TMDB_BASE_URL}/movie/{tmdb_id}",
+            params={"api_key": key, "append_to_response": "credits"},
+            timeout=10,
+        )
+        resp.raise_for_status()
+        data = resp.json()
+
+        backdrop_url = ""
+        if data.get("backdrop_path"):
+            backdrop_url = f"https://image.tmdb.org/t/p/w1280{data['backdrop_path']}"
+
+        genres = [g["name"] for g in data.get("genres", [])]
+
+        director = None
+        cast = []
+        credits = data.get("credits", {})
+        for crew_member in credits.get("crew", []):
+            if crew_member.get("job") == "Director":
+                director = crew_member["name"]
+                break
+        for actor in credits.get("cast", [])[:10]:
+            profile_url = ""
+            if actor.get("profile_path"):
+                profile_url = f"{TMDB_IMAGE_BASE}{actor['profile_path']}"
+            cast.append({
+                "name": actor.get("name", ""),
+                "character": actor.get("character", ""),
+                "profile_url": profile_url,
+            })
+
+        return {
+            "backdrop_url": backdrop_url,
+            "genres": genres,
+            "runtime": data.get("runtime"),
+            "release_date": data.get("release_date", ""),
+            "tagline": data.get("tagline", ""),
+            "director": director,
+            "cast": cast,
+        }
+    except httpx.HTTPError:
+        return None
+
+
 def _fetch_imdb_id(tmdb_id: str, api_key: str | None = None) -> str | None:
     """Fetch the IMDb ID for a movie from TMDB external IDs endpoint."""
     key = api_key or TMDB_API_KEY

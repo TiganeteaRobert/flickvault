@@ -5,9 +5,10 @@ from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.schemas import MovieCreate, MovieOut, MovieBatchCreate, MovieSearchResult
-from app.dependencies import get_current_user
-from app.models import User
+from app.dependencies import get_current_user, get_api_keys, APIKeys
+from app.models import User, Movie
 from app import crud
+from app.tmdb import get_movie_details
 
 router = APIRouter(tags=["movies"])
 
@@ -32,6 +33,31 @@ def add_movies_batch(collection_id: int, data: MovieBatchCreate, db: Session = D
 def remove_movie(collection_id: int, movie_id: int, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
     if not crud.remove_movie_from_collection(db, collection_id, movie_id, user.id):
         raise HTTPException(status_code=404, detail="Movie not found in collection")
+
+
+@router.get("/api/movies/{movie_id}/details")
+def movie_details(movie_id: int, db: Session = Depends(get_db), user: User = Depends(get_current_user), keys: APIKeys = Depends(get_api_keys)):
+    movie = db.query(Movie).filter(Movie.id == movie_id).first()
+    if not movie:
+        raise HTTPException(status_code=404, detail="Movie not found")
+
+    result = {
+        "id": movie.id,
+        "title": movie.title,
+        "year": movie.year,
+        "rating": movie.rating,
+        "overview": movie.overview,
+        "poster_url": movie.poster_url,
+        "imdb_id": movie.imdb_id,
+        "tmdb_id": movie.tmdb_id,
+    }
+
+    if movie.tmdb_id:
+        details = get_movie_details(movie.tmdb_id, api_key=keys.tmdb_key)
+        if details:
+            result.update(details)
+
+    return result
 
 
 @router.get("/api/movies/search", response_model=list[MovieSearchResult])
