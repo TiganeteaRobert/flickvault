@@ -94,7 +94,7 @@ document.getElementById('delete-toggle').addEventListener('click', () => deleteC
 document.getElementById('delete-cancel').addEventListener('click', () => deleteConfirm.classList.add('hidden'));
 
 document.getElementById('delete-btn').addEventListener('click', async () => {
-    const resp = await fetch('/api/collections/{{ collection.id }}', { method: 'DELETE' });
+    const resp = await fetch('/api/collections/{{ collection.id }}', { method: 'DELETE', headers: { ...flickvaultHeaders() } });
     if (resp.ok) window.location.href = '/';
 });
 
@@ -103,7 +103,7 @@ document.querySelectorAll('.remove-btn').forEach(btn => {
     btn.addEventListener('click', async () => {
         const movieId = btn.dataset.movieId;
         const collectionId = btn.dataset.collectionId;
-        const resp = await fetch(`/api/collections/${collectionId}/movies/${movieId}`, { method: 'DELETE' });
+        const resp = await fetch(`/api/collections/${collectionId}/movies/${movieId}`, { method: 'DELETE', headers: { ...flickvaultHeaders() } });
         if (resp.ok) {
             btn.closest('.group').remove();
         }

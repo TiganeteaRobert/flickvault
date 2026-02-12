@@ -8,6 +8,9 @@ COPY pyproject.toml uv.lock ./
 RUN uv sync --frozen --no-dev
 
 COPY app/ app/
+COPY mcp_server/ mcp_server/
+
+RUN mkdir -p /data
 
 EXPOSE 8000
 

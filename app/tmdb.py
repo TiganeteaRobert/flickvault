@@ -8,15 +8,16 @@ TMDB_BASE_URL = "https://api.themoviedb.org/3"
 TMDB_IMAGE_BASE = "https://image.tmdb.org/t/p/w500"
 
 
-def search_movie(title: str, year: int | None = None) -> dict | None:
+def search_movie(title: str, year: int | None = None, api_key: str | None = None) -> dict | None:
     """Search TMDB for a movie and return poster_url, overview, tmdb_id, imdb_id.
 
     Returns None if no match is found or API key is missing.
     """
-    if not TMDB_API_KEY:
+    key = api_key or TMDB_API_KEY
+    if not key:
         return None
 
-    params = {"api_key": TMDB_API_KEY, "query": title}
+    params = {"api_key": key, "query": title}
     if year:
         params["year"] = year
 
@@ -38,7 +39,7 @@ def search_movie(title: str, year: int | None = None) -> dict | None:
         rating = movie.get("vote_average")
 
         # Fetch external IDs (imdb_id) from TMDB
-        imdb_id = _fetch_imdb_id(tmdb_id)
+        imdb_id = _fetch_imdb_id(tmdb_id, api_key=key)
 
         return {
             "tmdb_id": tmdb_id,
@@ -51,12 +52,13 @@ def search_movie(title: str, year: int | None = None) -> dict | None:
         return None
 
 
-def _fetch_imdb_id(tmdb_id: str) -> str | None:
+def _fetch_imdb_id(tmdb_id: str, api_key: str | None = None) -> str | None:
     """Fetch the IMDb ID for a movie from TMDB external IDs endpoint."""
+    key = api_key or TMDB_API_KEY
     try:
         resp = httpx.get(
             f"{TMDB_BASE_URL}/movie/{tmdb_id}/external_ids",
-            params={"api_key": TMDB_API_KEY},
+            params={"api_key": key},
             timeout=10,
         )
         resp.raise_for_status()

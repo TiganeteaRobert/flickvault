@@ -1,11 +1,14 @@
 from pathlib import Path
 
+import anthropic
+import httpx
 from fastapi import FastAPI, Request, Depends
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 
 from app.database import init_db, get_db
+from app.dependencies import APIKeys, get_api_keys
 from app.routers import collections, movies, generate
 from app import crud
 
@@ -24,6 +27,51 @@ app.include_router(movies.router)
 @app.on_event("startup")
 def startup():
     init_db()
+
+
+# --- Health & API key endpoints ---
+
+@app.get("/health")
+def health():
+    return {"status": "ok"}
+
+
+@app.get("/api/keys/status")
+def keys_status(keys: APIKeys = Depends(get_api_keys)):
+    return {
+        "anthropic": bool(keys.anthropic_key),
+        "tmdb": bool(keys.tmdb_key),
+    }
+
+
+@app.post("/api/keys/validate")
+def keys_validate(keys: APIKeys = Depends(get_api_keys)):
+    results = {"anthropic": False, "tmdb": False}
+
+    if keys.tmdb_key:
+        try:
+            resp = httpx.get(
+                "https://api.themoviedb.org/3/configuration",
+                params={"api_key": keys.tmdb_key},
+                timeout=10,
+            )
+            results["tmdb"] = resp.status_code == 200
+        except httpx.HTTPError:
+            pass
+
+    if keys.anthropic_key:
+        try:
+            client = anthropic.Anthropic(api_key=keys.anthropic_key)
+            client.messages.create(
+                model="claude-sonnet-4-5-20250929",
+                max_tokens=1,
+                messages=[{"role": "user", "content": "hi"}],
+            )
+            results["anthropic"] = True
+        except Exception:
+            pass
+
+    return results
 
 
 # --- Web UI routes ---

@@ -26,7 +26,12 @@ Rules:
 - Order movies by relevance to the prompt"""
 
 
-def generate_collection(prompt: str, movie_count: int = 10) -> dict:
+def generate_collection(
+    prompt: str,
+    movie_count: int = 10,
+    anthropic_key: str | None = None,
+    tmdb_key: str | None = None,
+) -> dict:
     """Call Claude to generate a movie collection, then enrich with TMDB data.
 
     Returns:
@@ -35,10 +40,11 @@ def generate_collection(prompt: str, movie_count: int = 10) -> dict:
     Raises:
         ValueError: If API key is missing or Claude returns invalid data.
     """
-    if not ANTHROPIC_API_KEY:
+    ak = anthropic_key or ANTHROPIC_API_KEY
+    if not ak:
         raise ValueError("ANTHROPIC_API_KEY is not set")
 
-    client = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
+    client = anthropic.Anthropic(api_key=ak)
 
     user_message = f"{prompt}\n\nPlease return exactly {movie_count} movies."
 
@@ -72,7 +78,7 @@ def generate_collection(prompt: str, movie_count: int = 10) -> dict:
 
         movie_data = {"title": title, "year": year, "overview": "", "poster_url": ""}
 
-        tmdb_result = search_movie(title, year)
+        tmdb_result = search_movie(title, year, api_key=tmdb_key)
         if tmdb_result:
             movie_data["tmdb_id"] = tmdb_result["tmdb_id"]
             movie_data["imdb_id"] = tmdb_result["imdb_id"]

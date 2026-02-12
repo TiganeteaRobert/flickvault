@@ -3,6 +3,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from app.database import get_db
+from app.dependencies import APIKeys, get_api_keys
 from app.schemas import CollectionCreate, MovieCreate
 from app import crud
 from app.ai_generate import generate_collection
@@ -16,10 +17,15 @@ class GenerateRequest(BaseModel):
 
 
 @router.post("/generate")
-def generate(data: GenerateRequest, db: Session = Depends(get_db)):
+def generate(data: GenerateRequest, db: Session = Depends(get_db), keys: APIKeys = Depends(get_api_keys)):
     """Generate an AI-powered movie collection from a natural language prompt."""
     try:
-        result = generate_collection(data.prompt, data.movie_count)
+        result = generate_collection(
+            data.prompt,
+            data.movie_count,
+            anthropic_key=keys.anthropic_key,
+            tmdb_key=keys.tmdb_key,
+        )
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
