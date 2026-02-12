@@ -141,10 +141,14 @@
                     <div id="modal-cast" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3"></div>
                 </div>
 
-                <!-- Links -->
+                <!-- Links & Actions -->
                 <div class="px-6 mt-5 pb-6 flex items-center gap-3">
                     <a id="modal-imdb-link" href="#" target="_blank" class="hidden text-sm font-medium text-yellow-600 dark:text-yellow-500 hover:underline">IMDb</a>
                     <a id="modal-tmdb-link" href="#" target="_blank" class="hidden text-sm font-medium text-blue-600 dark:text-blue-400 hover:underline">TMDB</a>
+                    <button id="modal-similar-btn" onclick="findSimilarMovies()" class="ml-auto inline-flex items-center gap-1.5 text-sm font-medium text-brand-600 dark:text-brand-400 hover:text-brand-700 dark:hover:text-brand-300 transition-colors">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"/></svg>
+                        More like this
+                    </button>
                 </div>
             </div>
         </div>
@@ -186,6 +190,8 @@ document.querySelectorAll('.remove-btn').forEach(btn => {
 const movieModal = document.getElementById('movie-modal');
 const modalLoading = document.getElementById('modal-loading');
 const modalBody = document.getElementById('modal-body');
+let currentMovieTitle = '';
+let currentMovieYear = null;
 
 async function openMovieModal(movieId) {
     movieModal.classList.remove('hidden');
@@ -197,6 +203,9 @@ async function openMovieModal(movieId) {
         const resp = await fetch(`/api/movies/${movieId}/details`, { headers: { ...flickvaultHeaders() } });
         if (!resp.ok) throw new Error('Failed to fetch');
         const m = await resp.json();
+
+        currentMovieTitle = m.title || '';
+        currentMovieYear = m.year || null;
 
         // Backdrop
         const backdropImg = document.getElementById('modal-backdrop-img');
@@ -328,6 +337,35 @@ async function openMovieModal(movieId) {
         modalBody.classList.remove('hidden');
     } catch {
         closeMovieModal();
+    }
+}
+
+async function findSimilarMovies() {
+    const btn = document.getElementById('modal-similar-btn');
+    const origHtml = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = `<svg class="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg> Generating...`;
+
+    const yearStr = currentMovieYear ? ` (${currentMovieYear})` : '';
+    const prompt = `10 movies similar to "${currentMovieTitle}"${yearStr}. Include movies with similar themes, tone, and style.`;
+    const collectionName = `Movies Like ${currentMovieTitle}${yearStr}`;
+
+    try {
+        const resp = await fetch('/api/collections/generate', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', ...flickvaultHeaders() },
+            body: JSON.stringify({ prompt, movie_count: 10, collection_name: collectionName }),
+        });
+        if (!resp.ok) {
+            const err = await resp.json().catch(() => ({}));
+            throw new Error(err.detail || 'Generation failed');
+        }
+        const data = await resp.json();
+        window.location.href = `/collections/${data.id}`;
+    } catch (e) {
+        btn.innerHTML = origHtml;
+        btn.disabled = false;
+        alert(e.message || 'Failed to generate similar movies. Check your API keys in settings.');
     }
 }
 

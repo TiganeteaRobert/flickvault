@@ -68,15 +68,20 @@
 {% if collections %}
 <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
     {% for c in collections %}
-    <a href="/collections/{{ c.id }}" class="group block rounded-xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 p-5 shadow-sm hover:shadow-md hover:border-brand-500/50 dark:hover:border-brand-500/50 transition-all duration-200">
-        <div class="flex items-start justify-between mb-2">
-            <h3 class="font-semibold text-gray-900 dark:text-gray-100 group-hover:text-brand-600 dark:group-hover:text-brand-500 transition-colors">{{ c.name }}</h3>
-            <span class="inline-flex items-center rounded-full bg-brand-100 dark:bg-brand-900/40 px-2.5 py-0.5 text-xs font-medium text-brand-700 dark:text-brand-400">
-                {{ c.movie_count }}
-            </span>
-        </div>
-        <p class="text-sm text-gray-500 dark:text-gray-400 line-clamp-2">{{ c.description or "No description" }}</p>
-    </a>
+    <div class="group relative rounded-xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 shadow-sm hover:shadow-md hover:border-brand-500/50 dark:hover:border-brand-500/50 transition-all duration-200">
+        <a href="/collections/{{ c.id }}" class="block p-5">
+            <div class="flex items-start justify-between mb-2">
+                <h3 class="font-semibold text-gray-900 dark:text-gray-100 group-hover:text-brand-600 dark:group-hover:text-brand-500 transition-colors pr-6">{{ c.name }}</h3>
+                <span class="inline-flex items-center rounded-full bg-brand-100 dark:bg-brand-900/40 px-2.5 py-0.5 text-xs font-medium text-brand-700 dark:text-brand-400">
+                    {{ c.movie_count }}
+                </span>
+            </div>
+            <p class="text-sm text-gray-500 dark:text-gray-400 line-clamp-2">{{ c.description or "No description" }}</p>
+        </a>
+        <button onclick="deleteCollection(event, {{ c.id }}, this)" class="absolute top-3 right-3 p-1 rounded-md text-gray-300 dark:text-gray-600 hover:text-red-500 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 opacity-0 group-hover:opacity-100 transition-all" title="Delete collection">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+        </button>
+    </div>
     {% endfor %}
 </div>
 {% else %}
@@ -113,6 +118,17 @@ document.getElementById('create-form').addEventListener('submit', async (e) => {
         alert(err.detail || 'Error creating collection');
     }
 });
+
+// Delete collection
+async function deleteCollection(e, id, btn) {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!confirm('Delete this collection?')) return;
+    const resp = await fetch(`/api/collections/${id}`, { method: 'DELETE', headers: { ...flickvaultHeaders() } });
+    if (resp.ok) {
+        btn.closest('.group').remove();
+    }
+}
 
 // AI Generate
 document.getElementById('generate-form').addEventListener('submit', async (e) => {
