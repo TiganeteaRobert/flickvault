@@ -146,7 +146,7 @@ document.getElementById('create-form').addEventListener('submit', async (e) => {
     const data = { name: form.name.value, description: form.description.value };
     const resp = await fetch('/api/collections', {
         method: 'POST',
-        headers: {'Content-Type': 'application/json', ...flickvaultHeaders()},
+        headers: {'Content-Type': 'application/json'},
         body: JSON.stringify(data)
     });
     if (resp.ok) {
@@ -162,7 +162,7 @@ async function deleteCollection(e, id, btn) {
     e.preventDefault();
     e.stopPropagation();
     if (!confirm('Delete this collection?')) return;
-    const resp = await fetch(`/api/collections/${id}`, { method: 'DELETE', headers: { ...flickvaultHeaders() } });
+    const resp = await fetch(`/api/collections/${id}`, { method: 'DELETE' });
     if (resp.ok) {
         btn.closest('.group').remove();
     }
@@ -184,7 +184,7 @@ document.getElementById('generate-form').addEventListener('submit', async (e) =>
     try {
         const resp = await fetch('/api/collections/generate', {
             method: 'POST',
-            headers: {'Content-Type': 'application/json', ...flickvaultHeaders()},
+            headers: {'Content-Type': 'application/json'},
             body: JSON.stringify({
                 prompt: document.getElementById('gen-prompt').value,
                 movie_count: parseInt(document.getElementById('gen-count').value),

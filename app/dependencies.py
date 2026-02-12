@@ -1,4 +1,4 @@
-"""FastAPI dependencies for per-user API key extraction and authentication."""
+"""FastAPI dependencies for API key access and authentication."""
 
 from dataclasses import dataclass
 
@@ -17,11 +17,11 @@ class APIKeys:
     tmdb_key: str
 
 
-def get_api_keys(request: Request) -> APIKeys:
-    """Extract API keys from request headers, falling back to server env vars."""
+def get_api_keys() -> APIKeys:
+    """Return API keys from server environment variables."""
     return APIKeys(
-        anthropic_key=request.headers.get("X-Anthropic-Key", "") or ANTHROPIC_API_KEY,
-        tmdb_key=request.headers.get("X-TMDB-Key", "") or TMDB_API_KEY,
+        anthropic_key=ANTHROPIC_API_KEY,
+        tmdb_key=TMDB_API_KEY,
     )
 
 

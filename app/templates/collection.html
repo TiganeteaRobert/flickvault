@@ -169,7 +169,7 @@ document.getElementById('delete-toggle').addEventListener('click', () => deleteC
 document.getElementById('delete-cancel').addEventListener('click', () => deleteConfirm.classList.add('hidden'));
 
 document.getElementById('delete-btn').addEventListener('click', async () => {
-    const resp = await fetch('/api/collections/{{ collection.id }}', { method: 'DELETE', headers: { ...flickvaultHeaders() } });
+    const resp = await fetch('/api/collections/{{ collection.id }}', { method: 'DELETE' });
     if (resp.ok) window.location.href = '/';
 });
 
@@ -178,7 +178,7 @@ document.querySelectorAll('.remove-btn').forEach(btn => {
     btn.addEventListener('click', async () => {
         const movieId = btn.dataset.movieId;
         const collectionId = btn.dataset.collectionId;
-        const resp = await fetch(`/api/collections/${collectionId}/movies/${movieId}`, { method: 'DELETE', headers: { ...flickvaultHeaders() } });
+        const resp = await fetch(`/api/collections/${collectionId}/movies/${movieId}`, { method: 'DELETE' });
         if (resp.ok) {
             btn.closest('.group').remove();
         }
@@ -199,7 +199,7 @@ async function openMovieModal(movieId) {
     document.body.style.overflow = 'hidden';
 
     try {
-        const resp = await fetch(`/api/movies/${movieId}/details`, { headers: { ...flickvaultHeaders() } });
+        const resp = await fetch(`/api/movies/${movieId}/details`, { headers: {  } });
         if (!resp.ok) throw new Error('Failed to fetch');
         const m = await resp.json();
 
@@ -352,7 +352,7 @@ async function findSimilarMovies() {
     try {
         const resp = await fetch('/api/collections/generate', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json', ...flickvaultHeaders() },
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ prompt, movie_count: 10, collection_name: collectionName }),
         });
         if (!resp.ok) {

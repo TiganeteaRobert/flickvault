@@ -66,7 +66,6 @@ document.getElementById('import-form').addEventListener('submit', async (e) => {
 
     const resp = await fetch(`/api/collections/${collectionId}/import`, {
         method: 'POST',
-        headers: { ...flickvaultHeaders() },
         body: formData
     });
     const data = await resp.json();
