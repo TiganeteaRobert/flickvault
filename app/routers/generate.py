@@ -1,10 +1,12 @@
 from pydantic import BaseModel
 from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.database import get_db
-from app.dependencies import APIKeys, get_api_keys
+from app.dependencies import APIKeys, get_api_keys, get_current_user
 from app.schemas import CollectionCreate, MovieCreate
+from app.models import User
 from app import crud
 from app.ai_generate import generate_collection
 
@@ -17,7 +19,7 @@ class GenerateRequest(BaseModel):
 
 
 @router.post("/generate")
-def generate(data: GenerateRequest, db: Session = Depends(get_db), keys: APIKeys = Depends(get_api_keys)):
+def generate(data: GenerateRequest, db: Session = Depends(get_db), keys: APIKeys = Depends(get_api_keys), user: User = Depends(get_current_user)):
     """Generate an AI-powered movie collection from a natural language prompt."""
     try:
         result = generate_collection(
@@ -29,13 +31,24 @@ def generate(data: GenerateRequest, db: Session = Depends(get_db), keys: APIKeys
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
-    # Create the collection
-    collection = crud.create_collection(
-        db, CollectionCreate(name=result["name"], description=result["description"])
-    )
+    # Create the collection, handling duplicate names by appending a number
+    name = result["name"]
+    collection = None
+    for attempt in range(20):
+        try_name = name if attempt == 0 else f"{name} ({attempt + 1})"
+        try:
+            collection = crud.create_collection(
+                db, CollectionCreate(name=try_name, description=result["description"]), user.id
+            )
+            break
+        except IntegrityError:
+            db.rollback()
+
+    if collection is None:
+        raise HTTPException(status_code=409, detail="A collection with that name already exists. Try a different prompt.")
 
     # Add all movies
     movies_data = [MovieCreate(**m) for m in result["movies"]]
-    crud.add_movies_batch(db, collection.id, movies_data)
+    crud.add_movies_batch(db, collection.id, movies_data, user.id)
 
     return {"id": collection.id, "name": collection.name}

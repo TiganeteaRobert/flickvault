@@ -1,4 +1,6 @@
-from sqlalchemy import create_engine, event, inspect, text
+import os
+
+from sqlalchemy import create_engine, event
 from sqlalchemy.orm import sessionmaker, DeclarativeBase
 
 from app.config import DATABASE_URL
@@ -31,16 +33,7 @@ def get_db():
 
 
 def init_db():
-    from app.models import Collection, Movie, CollectionMovie  # noqa: F401
+    from app.models import User, Collection, Movie, CollectionMovie  # noqa: F401
+    if os.environ.get("RESET_DB", "").lower() == "true":
+        Base.metadata.drop_all(bind=engine)
     Base.metadata.create_all(bind=engine)
-    _migrate(engine)
-
-
-def _migrate(eng):
-    """Add columns that create_all won't add to existing tables."""
-    insp = inspect(eng)
-    if "movies" in insp.get_table_names():
-        columns = {c["name"] for c in insp.get_columns("movies")}
-        if "rating" not in columns:
-            with eng.begin() as conn:
-                conn.execute(text("ALTER TABLE movies ADD COLUMN rating REAL"))

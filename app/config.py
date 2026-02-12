@@ -12,3 +12,8 @@ DATABASE_URL = f"sqlite:///{DATABASE_PATH}"
 
 ANTHROPIC_API_KEY = os.environ.get("ANTHROPIC_API_KEY", "")
 TMDB_API_KEY = os.environ.get("TMDB_API_KEY", "")
+
+JWT_SECRET = os.environ.get("JWT_SECRET", "change-me-in-production-please!!")
+JWT_ALGORITHM = "HS256"
+JWT_EXPIRATION_HOURS = int(os.environ.get("JWT_EXPIRATION_HOURS", "720"))  # 30 days
+SECURE_COOKIES = os.environ.get("SECURE_COOKIES", "true").lower() == "true"

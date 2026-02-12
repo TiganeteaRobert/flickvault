@@ -5,7 +5,7 @@
 {% block content %}
 <!-- Header -->
 <div class="mb-8">
-    <div class="flex items-start justify-between">
+    <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
         <div>
             <a href="/" class="text-sm text-gray-500 dark:text-gray-400 hover:text-brand-600 dark:hover:text-brand-500 transition-colors mb-2 inline-block">&larr; All Collections</a>
             <h1 class="text-2xl font-bold mt-1">{{ collection.name }}</h1>
@@ -21,7 +21,7 @@
 </div>
 
 <!-- Delete Confirmation -->
-<div id="delete-confirm" class="hidden mb-6 rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 px-4 py-3 flex items-center justify-between">
+<div id="delete-confirm" class="hidden mb-6 rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 px-4 py-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
     <p class="text-sm text-red-700 dark:text-red-300">Permanently delete <strong>{{ collection.name }}</strong> and all movie associations?</p>
     <div class="flex gap-2">
         <button id="delete-cancel" class="text-sm px-3 py-1 rounded-lg text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-800 transition-colors">Cancel</button>
@@ -70,7 +70,7 @@
                 <a href="https://www.imdb.com/title/{{ movie.imdb_id }}/" target="_blank"
                    class="text-xs font-medium text-yellow-600 dark:text-yellow-500 hover:underline">IMDb</a>
                 {% endif %}
-                <button class="remove-btn ml-auto text-xs text-red-400 hover:text-red-500 dark:text-red-500 dark:hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity"
+                <button class="remove-btn ml-auto text-xs text-red-400 hover:text-red-500 dark:text-red-500 dark:hover:text-red-400 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity"
                         data-movie-id="{{ movie.id }}" data-collection-id="{{ collection.id }}">
                     Remove
                 </button>

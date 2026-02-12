@@ -26,17 +26,18 @@ def _get_db():
 # --- Tool 1: create_collection ---
 
 @mcp.tool()
-def create_collection(name: str, description: str = "") -> str:
+def create_collection(user_id: int, name: str, description: str = "") -> str:
     """Create a new named movie collection.
 
     Args:
-        name: Unique name for the collection
+        user_id: ID of the authenticated user who owns this collection
+        name: Unique name for the collection (unique per user)
         description: Optional description
     """
     db = _get_db()
     try:
         data = CollectionCreate(name=name, description=description)
-        collection = crud.create_collection(db, data)
+        collection = crud.create_collection(db, data, user_id)
         return json.dumps({
             "id": collection.id,
             "name": collection.name,
@@ -51,11 +52,15 @@ def create_collection(name: str, description: str = "") -> str:
 # --- Tool 2: list_collections ---
 
 @mcp.tool()
-def list_collections() -> str:
-    """List all movie collections with their movie counts."""
+def list_collections(user_id: int) -> str:
+    """List all movie collections with their movie counts for a user.
+
+    Args:
+        user_id: ID of the authenticated user whose collections to list
+    """
     db = _get_db()
     try:
-        collections = crud.get_collections(db)
+        collections = crud.get_collections(db, user_id)
         return json.dumps([
             {
                 "id": c["id"],
@@ -73,6 +78,7 @@ def list_collections() -> str:
 
 @mcp.tool()
 def add_movie_to_collection(
+    user_id: int,
     collection_id: int,
     title: str,
     year: int | None = None,
@@ -84,6 +90,7 @@ def add_movie_to_collection(
     """Add a single movie to a collection. Deduplicates by trakt_id or imdb_id.
 
     Args:
+        user_id: ID of the authenticated user who owns the collection
         collection_id: ID of the collection to add to
         title: Movie title
         year: Release year
@@ -98,7 +105,7 @@ def add_movie_to_collection(
             title=title, year=year, trakt_id=trakt_id,
             imdb_id=imdb_id, tmdb_id=tmdb_id, overview=overview,
         )
-        result = crud.add_movie_to_collection(db, collection_id, data)
+        result = crud.add_movie_to_collection(db, collection_id, data, user_id)
         if "error" in result:
             return json.dumps(result)
         return json.dumps({
@@ -113,10 +120,11 @@ def add_movie_to_collection(
 # --- Tool 4: add_movies_batch ---
 
 @mcp.tool()
-def add_movies_batch(collection_id: int, movies_json: str) -> str:
+def add_movies_batch(user_id: int, collection_id: int, movies_json: str) -> str:
     """Add multiple movies to a collection in one batch. Key for bulk operations.
 
     Args:
+        user_id: ID of the authenticated user who owns the collection
         collection_id: ID of the collection to add to
         movies_json: JSON string — array of objects with fields: title, year, trakt_id, imdb_id, tmdb_id, overview
     """
@@ -124,7 +132,7 @@ def add_movies_batch(collection_id: int, movies_json: str) -> str:
     try:
         movies_data = json.loads(movies_json)
         movie_creates = [MovieCreate(**m) for m in movies_data]
-        result = crud.add_movies_batch(db, collection_id, movie_creates)
+        result = crud.add_movies_batch(db, collection_id, movie_creates, user_id)
         return json.dumps(result)
     except json.JSONDecodeError:
         return json.dumps({"error": "Invalid JSON string"})
@@ -135,15 +143,16 @@ def add_movies_batch(collection_id: int, movies_json: str) -> str:
 # --- Tool 5: list_movies_in_collection ---
 
 @mcp.tool()
-def list_movies_in_collection(collection_id: int) -> str:
+def list_movies_in_collection(user_id: int, collection_id: int) -> str:
     """List all movies in a specific collection.
 
     Args:
+        user_id: ID of the authenticated user who owns the collection
         collection_id: ID of the collection
     """
     db = _get_db()
     try:
-        data = crud.get_collection_with_movies(db, collection_id)
+        data = crud.get_collection_with_movies(db, collection_id, user_id)
         if not data:
             return json.dumps({"error": "Collection not found"})
         movies = [
@@ -168,16 +177,17 @@ def list_movies_in_collection(collection_id: int) -> str:
 # --- Tool 6: remove_movie_from_collection ---
 
 @mcp.tool()
-def remove_movie_from_collection(collection_id: int, movie_id: int) -> str:
+def remove_movie_from_collection(user_id: int, collection_id: int, movie_id: int) -> str:
     """Remove a movie from a collection (does not delete the movie record).
 
     Args:
+        user_id: ID of the authenticated user who owns the collection
         collection_id: ID of the collection
         movie_id: ID of the movie to remove
     """
     db = _get_db()
     try:
-        success = crud.remove_movie_from_collection(db, collection_id, movie_id)
+        success = crud.remove_movie_from_collection(db, collection_id, movie_id, user_id)
         return json.dumps({"success": success})
     finally:
         db.close()
@@ -186,15 +196,16 @@ def remove_movie_from_collection(collection_id: int, movie_id: int) -> str:
 # --- Tool 7: delete_collection ---
 
 @mcp.tool()
-def delete_collection(collection_id: int) -> str:
+def delete_collection(user_id: int, collection_id: int) -> str:
     """Delete an entire collection and its movie associations.
 
     Args:
+        user_id: ID of the authenticated user who owns the collection
         collection_id: ID of the collection to delete
     """
     db = _get_db()
     try:
-        success = crud.delete_collection(db, collection_id)
+        success = crud.delete_collection(db, collection_id, user_id)
         return json.dumps({"success": success})
     finally:
         db.close()
@@ -203,15 +214,16 @@ def delete_collection(collection_id: int) -> str:
 # --- Tool 8: search_movies ---
 
 @mcp.tool()
-def search_movies(query: str) -> str:
-    """Search movies by title across all collections.
+def search_movies(user_id: int, query: str) -> str:
+    """Search movies by title across all collections. Collection names are scoped to the user.
 
     Args:
+        user_id: ID of the authenticated user (collection names scoped to this user)
         query: Search term to match against movie titles
     """
     db = _get_db()
     try:
-        results = crud.search_movies(db, query)
+        results = crud.search_movies(db, query, user_id)
         return json.dumps([
             {
                 "id": r["movie"].id,
@@ -229,12 +241,13 @@ def search_movies(query: str) -> str:
 # --- Tool 9: import_from_json_file ---
 
 @mcp.tool()
-def import_from_json_file(collection_id: int, file_path: str) -> str:
+def import_from_json_file(user_id: int, collection_id: int, file_path: str) -> str:
     """Import movies from a JSON file on disk into a collection.
     Supports trakt-watchlist-pending.json format (reads both 'already_added' and 'remaining' arrays)
     and plain arrays of movie objects.
 
     Args:
+        user_id: ID of the authenticated user who owns the collection
         collection_id: ID of the collection to import into
         file_path: Absolute path to the JSON file
     """
@@ -252,7 +265,7 @@ def import_from_json_file(collection_id: int, file_path: str) -> str:
             return json.dumps({"error": "No movies found in file"})
 
         movie_creates = [MovieCreate(**m) for m in movies]
-        result = crud.add_movies_batch(db, collection_id, movie_creates)
+        result = crud.add_movies_batch(db, collection_id, movie_creates, user_id)
         return json.dumps(result)
     except json.JSONDecodeError:
         return json.dumps({"error": "Invalid JSON file"})
@@ -263,11 +276,12 @@ def import_from_json_file(collection_id: int, file_path: str) -> str:
 # --- Tool 10: generate_collection ---
 
 @mcp.tool()
-def generate_collection(prompt: str, movie_count: int = 10) -> str:
+def generate_collection(user_id: int, prompt: str, movie_count: int = 10) -> str:
     """Generate a movie collection using AI. Describe the collection you want in natural language
     and Claude will create it with matching movies, enriched with TMDB poster and plot data.
 
     Args:
+        user_id: ID of the authenticated user who will own the new collection
         prompt: Natural language description of the collection (e.g. "Top 10 sci-fi movies from the 90s")
         movie_count: Number of movies to include (default 10)
     """
@@ -275,10 +289,10 @@ def generate_collection(prompt: str, movie_count: int = 10) -> str:
     try:
         result = ai_generate_collection(prompt, movie_count)
         collection = crud.create_collection(
-            db, CollectionCreate(name=result["name"], description=result["description"])
+            db, CollectionCreate(name=result["name"], description=result["description"]), user_id
         )
         movie_creates = [MovieCreate(**m) for m in result["movies"]]
-        batch_result = crud.add_movies_batch(db, collection.id, movie_creates)
+        batch_result = crud.add_movies_batch(db, collection.id, movie_creates, user_id)
         return json.dumps({
             "collection_id": collection.id,
             "collection_name": collection.name,

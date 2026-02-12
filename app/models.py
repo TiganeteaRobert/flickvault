@@ -8,16 +8,32 @@ from sqlalchemy.orm import relationship
 from app.database import Base
 
 
-class Collection(Base):
-    __tablename__ = "collections"
+class User(Base):
+    __tablename__ = "users"
 
     id = Column(Integer, primary_key=True, index=True)
-    name = Column(String(255), unique=True, nullable=False)
+    username = Column(String(150), unique=True, nullable=False, index=True)
+    password_hash = Column(String(255), nullable=False)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+
+    collections = relationship("Collection", back_populates="user", cascade="all, delete-orphan")
+
+
+class Collection(Base):
+    __tablename__ = "collections"
+    __table_args__ = (
+        UniqueConstraint("user_id", "name", name="uq_user_collection_name"),
+    )
+
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String(255), nullable=False)
     description = Column(Text, default="")
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
     updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc),
                         onupdate=lambda: datetime.now(timezone.utc))
 
+    user = relationship("User", back_populates="collections")
     collection_movies = relationship(
         "CollectionMovie", back_populates="collection", cascade="all, delete-orphan"
     )

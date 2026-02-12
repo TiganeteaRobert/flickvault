@@ -7,18 +7,19 @@ from app.schemas import CollectionCreate, CollectionUpdate, MovieCreate
 
 # --- Collections ---
 
-def create_collection(db: Session, data: CollectionCreate) -> Collection:
-    collection = Collection(name=data.name, description=data.description)
+def create_collection(db: Session, data: CollectionCreate, user_id: int) -> Collection:
+    collection = Collection(name=data.name, description=data.description, user_id=user_id)
     db.add(collection)
     db.commit()
     db.refresh(collection)
     return collection
 
 
-def get_collections(db: Session) -> list[dict]:
+def get_collections(db: Session, user_id: int) -> list[dict]:
     rows = (
         db.query(Collection, func.count(CollectionMovie.id).label("movie_count"))
         .outerjoin(CollectionMovie)
+        .filter(Collection.user_id == user_id)
         .group_by(Collection.id)
         .order_by(Collection.name)
         .all()
@@ -36,12 +37,16 @@ def get_collections(db: Session) -> list[dict]:
     return results
 
 
-def get_collection(db: Session, collection_id: int) -> Collection | None:
-    return db.query(Collection).filter(Collection.id == collection_id).first()
+def get_collection(db: Session, collection_id: int, user_id: int) -> Collection | None:
+    return db.query(Collection).filter(
+        Collection.id == collection_id, Collection.user_id == user_id
+    ).first()
 
 
-def get_collection_with_movies(db: Session, collection_id: int) -> dict | None:
-    collection = db.query(Collection).filter(Collection.id == collection_id).first()
+def get_collection_with_movies(db: Session, collection_id: int, user_id: int) -> dict | None:
+    collection = db.query(Collection).filter(
+        Collection.id == collection_id, Collection.user_id == user_id
+    ).first()
     if not collection:
         return None
     cms = (
@@ -63,8 +68,8 @@ def get_collection_with_movies(db: Session, collection_id: int) -> dict | None:
     }
 
 
-def update_collection(db: Session, collection_id: int, data: CollectionUpdate) -> Collection | None:
-    collection = get_collection(db, collection_id)
+def update_collection(db: Session, collection_id: int, data: CollectionUpdate, user_id: int) -> Collection | None:
+    collection = get_collection(db, collection_id, user_id)
     if not collection:
         return None
     if data.name is not None:
@@ -76,8 +81,8 @@ def update_collection(db: Session, collection_id: int, data: CollectionUpdate) -
     return collection
 
 
-def delete_collection(db: Session, collection_id: int) -> bool:
-    collection = get_collection(db, collection_id)
+def delete_collection(db: Session, collection_id: int, user_id: int) -> bool:
+    collection = get_collection(db, collection_id, user_id)
     if not collection:
         return False
     db.delete(collection)
@@ -131,9 +136,9 @@ def find_or_create_movie(db: Session, data: MovieCreate) -> Movie:
     return movie
 
 
-def add_movie_to_collection(db: Session, collection_id: int, data: MovieCreate) -> dict:
+def add_movie_to_collection(db: Session, collection_id: int, data: MovieCreate, user_id: int) -> dict:
     """Add a movie to a collection. Returns the movie and whether it was newly added."""
-    collection = get_collection(db, collection_id)
+    collection = get_collection(db, collection_id, user_id)
     if not collection:
         return {"error": "Collection not found"}
 
@@ -162,16 +167,16 @@ def add_movie_to_collection(db: Session, collection_id: int, data: MovieCreate) 
     return {"movie": movie, "added": True}
 
 
-def add_movies_batch(db: Session, collection_id: int, movies_data: list[MovieCreate]) -> dict:
+def add_movies_batch(db: Session, collection_id: int, movies_data: list[MovieCreate], user_id: int) -> dict:
     """Add multiple movies to a collection. Returns counts of added/skipped."""
-    collection = get_collection(db, collection_id)
+    collection = get_collection(db, collection_id, user_id)
     if not collection:
         return {"error": "Collection not found"}
 
     added = 0
     skipped = 0
     for data in movies_data:
-        result = add_movie_to_collection(db, collection_id, data)
+        result = add_movie_to_collection(db, collection_id, data, user_id)
         if "error" in result:
             return result
         if result["added"]:
@@ -182,7 +187,10 @@ def add_movies_batch(db: Session, collection_id: int, movies_data: list[MovieCre
     return {"added": added, "skipped": skipped, "total": len(movies_data)}
 
 
-def remove_movie_from_collection(db: Session, collection_id: int, movie_id: int) -> bool:
+def remove_movie_from_collection(db: Session, collection_id: int, movie_id: int, user_id: int) -> bool:
+    collection = get_collection(db, collection_id, user_id)
+    if not collection:
+        return False
     cm = (
         db.query(CollectionMovie)
         .filter(CollectionMovie.collection_id == collection_id, CollectionMovie.movie_id == movie_id)
@@ -195,8 +203,8 @@ def remove_movie_from_collection(db: Session, collection_id: int, movie_id: int)
     return True
 
 
-def search_movies(db: Session, query: str) -> list[dict]:
-    """Search movies by title, returning which collections each belongs to."""
+def search_movies(db: Session, query: str, user_id: int) -> list[dict]:
+    """Search movies by title, returning which of the user's collections each belongs to."""
     movies = (
         db.query(Movie)
         .filter(Movie.title.ilike(f"%{query}%"))
@@ -209,7 +217,10 @@ def search_movies(db: Session, query: str) -> list[dict]:
         collection_names = (
             db.query(Collection.name)
             .join(CollectionMovie)
-            .filter(CollectionMovie.movie_id == movie.id)
+            .filter(
+                CollectionMovie.movie_id == movie.id,
+                Collection.user_id == user_id,
+            )
             .all()
         )
         results.append({
