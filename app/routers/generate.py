@@ -19,11 +19,19 @@ class GenerateRequest(BaseModel):
     collection_name: str | None = None
     media_type: str = "movie"
     min_rating: float | None = None
+    source_collection_id: int | None = None
 
 
 @router.post("/generate")
 def generate(data: GenerateRequest, db: Session = Depends(get_db), keys: APIKeys = Depends(get_api_keys), user: User = Depends(get_current_user)):
     """Generate an AI-powered movie collection from a natural language prompt."""
+    # Gather titles to exclude from ancestor collections (for "More like this" lineage)
+    exclude_titles: list[str] = []
+    parent_id: int | None = None
+    if data.source_collection_id:
+        exclude_titles = crud.get_ancestor_movie_titles(db, data.source_collection_id, user.id)
+        parent_id = data.source_collection_id
+
     try:
         result = generate_collection(
             data.prompt,
@@ -32,6 +40,7 @@ def generate(data: GenerateRequest, db: Session = Depends(get_db), keys: APIKeys
             tmdb_key=keys.tmdb_key,
             media_type=data.media_type,
             min_rating=data.min_rating,
+            exclude_titles=exclude_titles or None,
         )
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
@@ -43,7 +52,8 @@ def generate(data: GenerateRequest, db: Session = Depends(get_db), keys: APIKeys
         try_name = name if attempt == 0 else f"{name} ({attempt + 1})"
         try:
             collection = crud.create_collection(
-                db, CollectionCreate(name=try_name, description=result["description"], media_type=data.media_type), user.id
+                db, CollectionCreate(name=try_name, description=result["description"], media_type=data.media_type), user.id,
+                parent_id=parent_id,
             )
             break
         except IntegrityError:

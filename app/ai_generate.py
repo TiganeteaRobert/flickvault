@@ -46,6 +46,7 @@ def generate_collection(
     tmdb_key: str | None = None,
     media_type: str = "movie",
     min_rating: float | None = None,
+    exclude_titles: list[str] | None = None,
 ) -> dict:
     """Call Claude to generate a collection, then enrich with TMDB data.
 
@@ -67,6 +68,10 @@ def generate_collection(
     # Request extra items when filtering by rating so we're more likely to hit the target count
     request_count = movie_count + 5 if min_rating is not None else movie_count
     user_message = f"{prompt}\n\nPlease return exactly {request_count} {item_label}."
+
+    if exclude_titles:
+        titles_list = ", ".join(f'"{t}"' for t in exclude_titles)
+        user_message += f"\n\nIMPORTANT: Do NOT include any of these titles (they are already in related collections): {titles_list}"
 
     response = client.messages.create(
         model="claude-sonnet-4-5-20250929",

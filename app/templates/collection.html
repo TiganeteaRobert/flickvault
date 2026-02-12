@@ -394,7 +394,7 @@ async function findSimilarMovies() {
         const resp = await fetch('/api/collections/generate', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ prompt, movie_count: 10, collection_name: collectionName, media_type: currentMediaType }),
+            body: JSON.stringify({ prompt, movie_count: 10, collection_name: collectionName, media_type: currentMediaType, source_collection_id: {{ collection.id }} }),
         });
         if (!resp.ok) {
             const err = await resp.json().catch(() => ({}));

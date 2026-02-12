@@ -285,7 +285,7 @@ def import_from_json_file(user_id: int, collection_id: int, file_path: str) -> s
 # --- Tool 10: generate_collection ---
 
 @mcp.tool()
-def generate_collection(user_id: int, prompt: str, movie_count: int = 10, media_type: str = "movie", min_rating: float | None = None) -> str:
+def generate_collection(user_id: int, prompt: str, movie_count: int = 10, media_type: str = "movie", min_rating: float | None = None, source_collection_id: int | None = None) -> str:
     """Generate a collection using AI. Describe the collection you want in natural language
     and Claude will create it with matching movies or TV shows, enriched with TMDB poster and plot data.
 
@@ -295,12 +295,19 @@ def generate_collection(user_id: int, prompt: str, movie_count: int = 10, media_
         movie_count: Number of items to include (default 10)
         media_type: Type of media — "movie" or "show" (default "movie")
         min_rating: Minimum TMDB rating to include (e.g. 7.0). Items below this are filtered out.
+        source_collection_id: ID of the source collection for "More like this" lineage. Movies from this collection and its ancestors will be excluded.
     """
     db = _get_db()
     try:
-        result = ai_generate_collection(prompt, movie_count, media_type=media_type, min_rating=min_rating)
+        exclude_titles = []
+        parent_id = None
+        if source_collection_id:
+            exclude_titles = crud.get_ancestor_movie_titles(db, source_collection_id, user_id)
+            parent_id = source_collection_id
+        result = ai_generate_collection(prompt, movie_count, media_type=media_type, min_rating=min_rating, exclude_titles=exclude_titles or None)
         collection = crud.create_collection(
-            db, CollectionCreate(name=result["name"], description=result["description"], media_type=media_type), user_id
+            db, CollectionCreate(name=result["name"], description=result["description"], media_type=media_type), user_id,
+            parent_id=parent_id,
         )
         movie_creates = [MovieCreate(**m) for m in result["movies"]]
         batch_result = crud.add_movies_batch(db, collection.id, movie_creates, user_id)
