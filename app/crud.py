@@ -7,8 +7,8 @@ from app.schemas import CollectionCreate, CollectionUpdate, MovieCreate
 
 # --- Collections ---
 
-def create_collection(db: Session, data: CollectionCreate, user_id: int) -> Collection:
-    collection = Collection(name=data.name, description=data.description, media_type=data.media_type, user_id=user_id)
+def create_collection(db: Session, data: CollectionCreate, user_id: int, parent_id: int | None = None) -> Collection:
+    collection = Collection(name=data.name, description=data.description, media_type=data.media_type, user_id=user_id, parent_id=parent_id)
     db.add(collection)
     db.commit()
     db.refresh(collection)
@@ -115,6 +115,32 @@ def delete_collection(db: Session, collection_id: int, user_id: int) -> bool:
     db.delete(collection)
     db.commit()
     return True
+
+
+def get_ancestor_movie_titles(db: Session, collection_id: int, user_id: int) -> list[str]:
+    """Walk the parent chain and return all movie titles from the source collection and its ancestors."""
+    titles: list[str] = []
+    visited: set[int] = set()
+    current_id: int | None = collection_id
+
+    while current_id is not None and current_id not in visited:
+        visited.add(current_id)
+        collection = db.query(Collection).filter(
+            Collection.id == current_id, Collection.user_id == user_id
+        ).first()
+        if not collection:
+            break
+        # Get movie titles in this collection
+        rows = (
+            db.query(Movie.title)
+            .join(CollectionMovie)
+            .filter(CollectionMovie.collection_id == current_id)
+            .all()
+        )
+        titles.extend(title for (title,) in rows)
+        current_id = collection.parent_id
+
+    return titles
 
 
 # --- Movies ---

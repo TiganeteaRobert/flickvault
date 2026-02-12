@@ -285,7 +285,7 @@ def import_from_json_file(user_id: int, collection_id: int, file_path: str) -> s
 # --- Tool 10: generate_collection ---
 
 @mcp.tool()
-def generate_collection(user_id: int, prompt: str, movie_count: int = 10, media_type: str = "movie") -> str:
+def generate_collection(user_id: int, prompt: str, movie_count: int = 10, media_type: str = "movie", min_rating: float | None = None) -> str:
     """Generate a collection using AI. Describe the collection you want in natural language
     and Claude will create it with matching movies or TV shows, enriched with TMDB poster and plot data.
 
@@ -294,10 +294,11 @@ def generate_collection(user_id: int, prompt: str, movie_count: int = 10, media_
         prompt: Natural language description of the collection (e.g. "Top 10 sci-fi movies from the 90s")
         movie_count: Number of items to include (default 10)
         media_type: Type of media — "movie" or "show" (default "movie")
+        min_rating: Minimum TMDB rating to include (e.g. 7.0). Items below this are filtered out.
     """
     db = _get_db()
     try:
-        result = ai_generate_collection(prompt, movie_count, media_type=media_type)
+        result = ai_generate_collection(prompt, movie_count, media_type=media_type, min_rating=min_rating)
         collection = crud.create_collection(
             db, CollectionCreate(name=result["name"], description=result["description"], media_type=media_type), user_id
         )

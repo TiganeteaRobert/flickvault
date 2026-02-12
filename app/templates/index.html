@@ -43,6 +43,18 @@
                     placeholder="Collection name (optional — AI picks one)"
                     class="flex-1 rounded-xl px-4 py-3 bg-white/[0.07] border border-white/[0.1] text-white placeholder-zinc-500 focus:border-brand-500/50 focus:bg-white/[0.1] transition-all text-sm"
                 >
+                <select name="min_rating" id="gen-min-rating" class="rounded-xl px-4 py-3 bg-white/[0.07] border border-white/[0.1] text-white focus:border-brand-500/50 transition-all text-sm appearance-none cursor-pointer">
+                    <option value="" selected>Any rating</option>
+                    <option value="4">4+ rating</option>
+                    <option value="4.5">4.5+ rating</option>
+                    <option value="5">5+ rating</option>
+                    <option value="5.5">5.5+ rating</option>
+                    <option value="6">6+ rating</option>
+                    <option value="6.5">6.5+ rating</option>
+                    <option value="7">7+ rating</option>
+                    <option value="7.5">7.5+ rating</option>
+                    <option value="8">8+ rating</option>
+                </select>
                 <button type="submit" id="gen-btn" class="rounded-xl bg-brand-500 text-surface-950 font-bold px-7 py-3 hover:bg-brand-400 hover:shadow-lg hover:shadow-brand-500/25 transition-all text-sm flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed btn-press">
                     <span id="gen-btn-text">Generate</span>
                     <svg id="gen-spinner" class="hidden animate-spin w-4 h-4" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" fill="none"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
@@ -217,7 +229,8 @@ document.getElementById('generate-form').addEventListener('submit', async (e) =>
                 prompt: document.getElementById('gen-prompt').value,
                 movie_count: parseInt(document.getElementById('gen-count').value),
                 collection_name: document.getElementById('gen-name').value || null,
-                media_type: document.getElementById('gen-media-type').value
+                media_type: document.getElementById('gen-media-type').value,
+                min_rating: document.getElementById('gen-min-rating').value ? parseFloat(document.getElementById('gen-min-rating').value) : null
             })
         });
         const data = await resp.json();

@@ -18,6 +18,7 @@ class GenerateRequest(BaseModel):
     movie_count: int = 10
     collection_name: str | None = None
     media_type: str = "movie"
+    min_rating: float | None = None
 
 
 @router.post("/generate")
@@ -30,6 +31,7 @@ def generate(data: GenerateRequest, db: Session = Depends(get_db), keys: APIKeys
             anthropic_key=keys.anthropic_key,
             tmdb_key=keys.tmdb_key,
             media_type=data.media_type,
+            min_rating=data.min_rating,
         )
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))

@@ -29,6 +29,7 @@ class Collection(Base):
     name = Column(String(255), nullable=False)
     description = Column(Text, default="")
     media_type = Column(String(10), nullable=False, default="movie")
+    parent_id = Column(Integer, ForeignKey("collections.id", ondelete="SET NULL"), nullable=True)
     user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
     updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc),

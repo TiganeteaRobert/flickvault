@@ -8,13 +8,17 @@ from app.config import ANTHROPIC_API_KEY
 from app.tmdb import search_media
 
 
-def _system_prompt(media_type: str) -> str:
+def _system_prompt(media_type: str, min_rating: float | None = None) -> str:
     if media_type == "show":
         item_label = "TV show"
         key = "shows"
     else:
         item_label = "movie"
         key = "movies"
+
+    rating_rule = ""
+    if min_rating is not None:
+        rating_rule = f"\n- Only include {item_label}s with a strong reputation — aim for titles generally rated {min_rating}+ on TMDB/IMDb"
 
     return f"""You are a {item_label} expert. The user will describe a {item_label} collection they want.
 Return a JSON object with exactly this structure:
@@ -32,7 +36,7 @@ Rules:
 - The "{key}" array must contain exactly the number of {item_label}s requested
 - Each {item_label} must have "title" (string) and "year" (integer)
 - Only include real, well-known {item_label}s that match the user's request
-- Order {item_label}s by relevance to the prompt"""
+- Order {item_label}s by relevance to the prompt{rating_rule}"""
 
 
 def generate_collection(
@@ -41,6 +45,7 @@ def generate_collection(
     anthropic_key: str | None = None,
     tmdb_key: str | None = None,
     media_type: str = "movie",
+    min_rating: float | None = None,
 ) -> dict:
     """Call Claude to generate a collection, then enrich with TMDB data.
 
@@ -59,12 +64,14 @@ def generate_collection(
 
     client = anthropic.Anthropic(api_key=ak)
 
-    user_message = f"{prompt}\n\nPlease return exactly {movie_count} {item_label}."
+    # Request extra items when filtering by rating so we're more likely to hit the target count
+    request_count = movie_count + 5 if min_rating is not None else movie_count
+    user_message = f"{prompt}\n\nPlease return exactly {request_count} {item_label}."
 
     response = client.messages.create(
         model="claude-sonnet-4-5-20250929",
         max_tokens=2048,
-        system=_system_prompt(media_type),
+        system=_system_prompt(media_type, min_rating),
         messages=[{"role": "user", "content": user_message}],
     )
 
@@ -102,6 +109,15 @@ def generate_collection(
             movie_data["rating"] = tmdb_result["rating"]
 
         enriched_movies.append(movie_data)
+
+    # Filter by minimum rating if requested
+    if min_rating is not None:
+        enriched_movies = [
+            m for m in enriched_movies
+            if m.get("rating") is not None and m["rating"] >= min_rating
+        ]
+        # Trim back to the originally requested count
+        enriched_movies = enriched_movies[:movie_count]
 
     return {
         "name": data["name"],
