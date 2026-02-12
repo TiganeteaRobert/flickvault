@@ -33,7 +33,32 @@ def get_collections(db: Session, user_id: int) -> list[dict]:
             "created_at": collection.created_at,
             "updated_at": collection.updated_at,
             "movie_count": count,
+            "poster_urls": [],
         })
+
+    # Fetch up to 4 poster URLs per collection in a single query
+    collection_ids = [r["id"] for r in results]
+    if collection_ids:
+        poster_rows = (
+            db.query(CollectionMovie.collection_id, Movie.poster_url)
+            .join(Movie)
+            .filter(
+                CollectionMovie.collection_id.in_(collection_ids),
+                Movie.poster_url != "",
+                Movie.poster_url.isnot(None),
+            )
+            .order_by(CollectionMovie.collection_id, CollectionMovie.sort_order)
+            .all()
+        )
+        posters: dict[int, list[str]] = {}
+        for cid, url in poster_rows:
+            if cid not in posters:
+                posters[cid] = []
+            if len(posters[cid]) < 4:
+                posters[cid].append(url)
+        for r in results:
+            r["poster_urls"] = posters.get(r["id"], [])
+
     return results
 
 

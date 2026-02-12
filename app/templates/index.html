@@ -4,90 +4,128 @@
 
 {% block content %}
 <!-- AI Collection Builder Hero -->
-<div class="mb-10 rounded-2xl bg-gradient-to-br from-brand-700 to-purple-900 p-5 sm:p-8 text-white shadow-lg">
-    <h1 class="text-2xl font-bold mb-2">Ask Claude to build a collection</h1>
-    <p class="text-purple-200 mb-6 text-sm">Describe the collection you want and AI will create it with posters and plot summaries.</p>
-    <form id="generate-form" class="space-y-3">
-        <div class="flex flex-col sm:flex-row gap-3">
-            <input
-                type="text"
-                name="prompt"
-                id="gen-prompt"
-                placeholder='e.g. "Top 10 sci-fi movies from the 90s"'
-                required
-                class="flex-1 rounded-lg px-4 py-3 text-gray-900 placeholder-gray-500 bg-white/90 focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-500 text-sm"
-            >
-            <select name="movie_count" id="gen-count" class="rounded-lg px-4 py-3 text-gray-900 bg-white/90 focus:outline-none focus:ring-2 focus:ring-brand-500 text-sm">
-                <option value="5">5 movies</option>
-                <option value="10" selected>10 movies</option>
-                <option value="15">15 movies</option>
-                <option value="20">20 movies</option>
-                <option value="25">25 movies</option>
-            </select>
+<div class="mb-12 rounded-3xl overflow-hidden mesh-gradient p-6 sm:p-8">
+    <div>
+        <div class="flex items-center gap-2 mb-3">
+            <span class="text-2xl">✨</span>
+            <span class="text-xs font-bold uppercase tracking-widest text-brand-400">AI-Powered</span>
         </div>
-        <div class="flex flex-col sm:flex-row gap-3">
-            <input
-                type="text"
-                name="collection_name"
-                id="gen-name"
-                placeholder="Collection name (optional — AI will pick one)"
-                class="flex-1 rounded-lg px-4 py-3 text-gray-900 placeholder-gray-500 bg-white/90 focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-500 text-sm"
-            >
-            <button type="submit" id="gen-btn" class="rounded-lg bg-white text-brand-700 font-semibold px-6 py-3 hover:bg-gray-100 transition-colors text-sm flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed">
-                <span id="gen-btn-text">Generate</span>
-                <svg id="gen-spinner" class="hidden animate-spin w-4 h-4" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" fill="none"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
-            </button>
-        </div>
-    </form>
-    <p id="gen-error" class="mt-3 text-red-300 text-sm hidden"></p>
+        <h1 class="text-2xl sm:text-3xl font-extrabold text-white mb-2 leading-tight">What are you in the mood for?</h1>
+        <p class="text-zinc-400 mb-6 text-sm max-w-lg">Describe your vibe and AI will curate a collection with posters and summaries. Like having a movie-buff friend who knows everything.</p>
+
+        <form id="generate-form" class="space-y-3">
+            <div class="flex flex-col sm:flex-row gap-3">
+                <input
+                    type="text"
+                    name="prompt"
+                    id="gen-prompt"
+                    placeholder='e.g. "Cozy rainy day movies" or "Mind-bending thrillers"'
+                    required
+                    class="flex-1 rounded-xl px-4 py-3 bg-white/[0.07] border border-white/[0.1] text-white placeholder-zinc-500 focus:border-brand-500/50 focus:bg-white/[0.1] transition-all text-sm"
+                >
+                <select name="movie_count" id="gen-count" class="rounded-xl px-4 py-3 bg-white/[0.07] border border-white/[0.1] text-white focus:border-brand-500/50 transition-all text-sm appearance-none cursor-pointer">
+                    <option value="5">5 movies</option>
+                    <option value="10" selected>10 movies</option>
+                    <option value="15">15 movies</option>
+                    <option value="20">20 movies</option>
+                    <option value="25">25 movies</option>
+                </select>
+            </div>
+            <div class="flex flex-col sm:flex-row gap-3">
+                <input
+                    type="text"
+                    name="collection_name"
+                    id="gen-name"
+                    placeholder="Collection name (optional — AI picks one)"
+                    class="flex-1 rounded-xl px-4 py-3 bg-white/[0.07] border border-white/[0.1] text-white placeholder-zinc-500 focus:border-brand-500/50 focus:bg-white/[0.1] transition-all text-sm"
+                >
+                <button type="submit" id="gen-btn" class="rounded-xl bg-brand-500 text-surface-950 font-bold px-7 py-3 hover:bg-brand-400 hover:shadow-lg hover:shadow-brand-500/25 transition-all text-sm flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed btn-press">
+                    <span id="gen-btn-text">Generate</span>
+                    <svg id="gen-spinner" class="hidden animate-spin w-4 h-4" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" fill="none"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
+                </button>
+            </div>
+        </form>
+        <p id="gen-error" class="mt-3 text-rose-400 text-sm hidden"></p>
+    </div>
 </div>
 
 {% if error %}
-<div class="mb-6 rounded-lg bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 px-4 py-3 text-red-700 dark:text-red-300 text-sm">
+<div class="mb-6 rounded-xl bg-rose-500/10 border border-rose-500/20 px-4 py-3 text-rose-300 text-sm">
     {{ error }}
 </div>
 {% endif %}
 
 <!-- Collections -->
 <div class="flex items-center justify-between mb-6">
-    <h2 class="text-xl font-bold">Your Collections</h2>
-    <button id="new-collection-toggle" class="text-sm font-medium text-brand-600 dark:text-brand-500 hover:underline">+ New Collection</button>
+    <div class="flex items-center gap-3">
+        <h2 class="text-xl font-bold text-zinc-100">Your Vault</h2>
+        {% if collections %}
+        <span class="text-xs font-semibold text-zinc-500 bg-white/[0.04] px-2.5 py-0.5 rounded-full">{{ collections|length }}</span>
+        {% endif %}
+    </div>
+    <button id="new-collection-toggle" class="text-sm font-semibold text-brand-400 hover:text-brand-300 transition-colors flex items-center gap-1">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4"/></svg>
+        New
+    </button>
 </div>
 
 <!-- New Collection Form (hidden by default) -->
-<div id="new-collection-form" class="hidden mb-6 rounded-xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 p-6 shadow-sm">
+<div id="new-collection-form" class="hidden mb-6 rounded-2xl glass-strong p-5">
     <form id="create-form" class="flex flex-col sm:flex-row gap-3">
         <input type="text" name="name" id="name" placeholder="Collection name" required
-               class="flex-1 rounded-lg border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500">
+               class="flex-1 rounded-xl bg-white/[0.04] border border-white/[0.08] px-4 py-2.5 text-sm text-zinc-200 placeholder-zinc-600 focus:border-brand-500/50 transition-colors">
         <input type="text" name="description" id="description" placeholder="Description (optional)"
-               class="flex-1 rounded-lg border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500">
-        <button type="submit" class="rounded-lg bg-brand-600 text-white font-medium px-5 py-2.5 hover:bg-brand-700 transition-colors text-sm">Create</button>
+               class="flex-1 rounded-xl bg-white/[0.04] border border-white/[0.08] px-4 py-2.5 text-sm text-zinc-200 placeholder-zinc-600 focus:border-brand-500/50 transition-colors">
+        <button type="submit" class="rounded-xl bg-brand-500 text-surface-950 font-semibold px-6 py-2.5 hover:bg-brand-400 transition-colors text-sm btn-press">Create</button>
     </form>
 </div>
 
 {% if collections %}
-<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
     {% for c in collections %}
-    <div class="group relative rounded-xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 shadow-sm hover:shadow-md hover:border-brand-500/50 dark:hover:border-brand-500/50 transition-all duration-200">
-        <a href="/collections/{{ c.id }}" class="block p-5">
-            <div class="flex items-start justify-between mb-2">
-                <h3 class="font-semibold text-gray-900 dark:text-gray-100 group-hover:text-brand-600 dark:group-hover:text-brand-500 transition-colors pr-6">{{ c.name }}</h3>
-                <span class="inline-flex items-center rounded-full bg-brand-100 dark:bg-brand-900/40 px-2.5 py-0.5 text-xs font-medium text-brand-700 dark:text-brand-400">
-                    {{ c.movie_count }}
-                </span>
+    <a href="/collections/{{ c.id }}" class="group relative rounded-2xl overflow-hidden card-glow bg-surface-900 block">
+        <!-- Poster mosaic -->
+        <div class="relative h-36 overflow-hidden bg-surface-850">
+            {% if c.poster_urls %}
+            <div class="absolute inset-0 flex">
+                {% for url in c.poster_urls %}
+                <img src="{{ url }}" alt="" class="h-full flex-1 object-cover opacity-70 group-hover:opacity-90 transition-opacity duration-300" loading="lazy">
+                {% endfor %}
             </div>
-            <p class="text-sm text-gray-500 dark:text-gray-400 line-clamp-2">{{ c.description or "No description" }}</p>
-        </a>
-        <button onclick="deleteCollection(event, {{ c.id }}, this)" class="absolute top-3 right-3 p-1 rounded-md text-gray-300 dark:text-gray-600 hover:text-red-500 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 opacity-0 group-hover:opacity-100 transition-all" title="Delete collection">
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
-        </button>
-    </div>
+            {% else %}
+            <div class="absolute inset-0 flex items-center justify-center">
+                <span class="text-4xl opacity-30">🎬</span>
+            </div>
+            {% endif %}
+            <!-- Gradient overlay -->
+            <div class="absolute inset-0 poster-overlay"></div>
+
+            <!-- Movie count pill -->
+            <span class="absolute top-3 left-3 inline-flex items-center rounded-full bg-black/50 backdrop-blur-md px-2.5 py-0.5 text-xs font-bold text-white/90 border border-white/[0.08]">
+                {{ c.movie_count }} movie{{ "s" if c.movie_count != 1 else "" }}
+            </span>
+
+            <!-- Delete button -->
+            <button onclick="deleteCollection(event, {{ c.id }}, this)" class="absolute top-2.5 right-2.5 p-1.5 rounded-full bg-black/30 backdrop-blur-sm text-white/50 hover:text-white hover:bg-rose-500/80 opacity-0 group-hover:opacity-100 transition-all duration-300" title="Delete collection">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+            </button>
+        </div>
+
+        <!-- Info panel -->
+        <div class="px-4 py-3.5">
+            <h3 class="font-bold text-zinc-100 group-hover:text-brand-400 transition-colors duration-300 truncate">{{ c.name }}</h3>
+            <p class="text-xs text-zinc-500 mt-1 line-clamp-2 leading-relaxed">{{ c.description or "No description yet" }}</p>
+        </div>
+    </a>
     {% endfor %}
 </div>
 {% else %}
-<div class="text-center py-12 text-gray-500 dark:text-gray-400">
-    <p class="text-lg mb-2">No collections yet</p>
-    <p class="text-sm">Create one above or use the AI builder to get started.</p>
+<div class="text-center py-20">
+    <div class="inline-flex items-center justify-center w-20 h-20 rounded-full bg-white/[0.03] mb-5">
+        <span class="text-4xl">🎥</span>
+    </div>
+    <p class="text-lg font-semibold text-zinc-300 mb-2">Your vault is empty</p>
+    <p class="text-sm text-zinc-500 max-w-sm mx-auto">Create a collection or let AI curate one for you. Describe your mood above and watch the magic happen.</p>
 </div>
 {% endif %}
 
@@ -139,7 +177,7 @@ document.getElementById('generate-form').addEventListener('submit', async (e) =>
     const errorEl = document.getElementById('gen-error');
 
     btn.disabled = true;
-    btnText.textContent = 'Claude is thinking...';
+    btnText.textContent = 'Thinking...';
     spinner.classList.remove('hidden');
     errorEl.classList.add('hidden');
 

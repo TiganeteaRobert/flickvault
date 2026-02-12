@@ -11,43 +11,69 @@
         theme: {
             extend: {
                 colors: {
-                    brand: { 500: '#8b5cf6', 600: '#7c3aed', 700: '#6d28d9' },
-                }
+                    brand: {
+                        50: '#fffbeb',
+                        100: '#fef3c7',
+                        200: '#fde68a',
+                        300: '#fcd34d',
+                        400: '#fbbf24',
+                        500: '#f59e0b',
+                        600: '#d97706',
+                        700: '#b45309',
+                        800: '#92400e',
+                        900: '#78350f',
+                    },
+                    surface: {
+                        50: '#fafafa',
+                        100: '#f4f4f5',
+                        200: '#e4e4e7',
+                        700: '#18181b',
+                        800: '#111114',
+                        850: '#0d0d10',
+                        900: '#09090b',
+                        950: '#050507',
+                    },
+                },
+                fontFamily: {
+                    sans: ['Inter', 'system-ui', '-apple-system', 'sans-serif'],
+                },
             }
         }
     }
     </script>
     <link rel="stylesheet" href="/static/style.css">
 </head>
-<body class="bg-gray-50 text-gray-900 dark:bg-gray-950 dark:text-gray-100 min-h-screen flex flex-col transition-colors duration-200">
-    <nav class="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 sticky top-0 z-50">
+<body class="bg-surface-950 dark:bg-surface-950 text-zinc-100 min-h-screen flex flex-col font-sans antialiased">
+    <!-- Nav -->
+    <nav class="sticky top-0 z-50 border-b border-white/[0.06] bg-surface-950/80 backdrop-blur-xl">
         <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="flex items-center justify-between h-16">
-                <div class="flex items-center gap-6">
-                    <a href="/" class="text-xl font-bold text-brand-600 dark:text-brand-500 hover:opacity-80 transition-opacity">
-                        Flickvault
+            <div class="flex items-center justify-between h-14">
+                <div class="flex items-center gap-5">
+                    <a href="/" class="flex items-center gap-2 group">
+                        <span class="text-2xl" aria-hidden="true">🍿</span>
+                        <span class="text-lg font-extrabold text-gradient tracking-tight">Flickvault</span>
                     </a>
-                    <div class="hidden sm:flex items-center gap-4">
-                        <a href="/" class="text-sm font-medium text-gray-600 dark:text-gray-300 hover:text-brand-600 dark:hover:text-brand-500 transition-colors">Collections</a>
-                        <a href="/import" class="text-sm font-medium text-gray-600 dark:text-gray-300 hover:text-brand-600 dark:hover:text-brand-500 transition-colors">Import</a>
+                    <div class="hidden sm:flex items-center gap-1">
+                        <a href="/" class="px-3 py-1.5 rounded-full text-sm font-medium text-zinc-400 hover:text-brand-400 hover:bg-white/[0.04] transition-all duration-200">Collections</a>
+                        <a href="/import" class="px-3 py-1.5 rounded-full text-sm font-medium text-zinc-400 hover:text-brand-400 hover:bg-white/[0.04] transition-all duration-200">Import</a>
                     </div>
                 </div>
                 <div class="flex items-center gap-1">
                 {% if user is defined and user %}
-                <span class="text-sm text-gray-600 dark:text-gray-300 mr-2 hidden sm:inline">{{ user.username }}</span>
-                <button id="logout-btn" class="p-2 rounded-lg text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors hidden sm:inline-flex" title="Logout">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
+                <span class="hidden sm:inline text-sm font-medium text-zinc-400 mr-1 px-3 py-1 rounded-full bg-white/[0.04]">{{ user.username }}</span>
+                <button id="logout-btn" class="hidden sm:inline-flex p-2 rounded-full text-zinc-500 hover:text-brand-400 hover:bg-white/[0.06] transition-all duration-200" title="Logout">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
                 </button>
                 {% endif %}
-                <button id="mobile-menu-btn" class="sm:hidden p-2 rounded-lg text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors" title="Menu">
+                <button id="mobile-menu-btn" class="sm:hidden p-2 rounded-full text-zinc-500 hover:text-brand-400 hover:bg-white/[0.06] transition-all duration-200" title="Menu">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
                 </button>
-                <button id="settings-toggle" class="p-2 rounded-lg text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors" title="API Key Settings">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                <button id="settings-toggle" class="p-2 rounded-full text-zinc-500 hover:text-brand-400 hover:bg-white/[0.06] transition-all duration-200" title="Settings">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
                 </button>
-                <button id="theme-toggle" class="p-2 rounded-lg text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors" title="Toggle theme">
-                    <svg id="sun-icon" class="w-5 h-5 hidden dark:block" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
-                    <svg id="moon-icon" class="w-5 h-5 block dark:hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"/></svg>
+                <button id="theme-toggle" class="p-2 rounded-full text-zinc-500 hover:text-brand-400 hover:bg-white/[0.06] transition-all duration-200" title="Toggle theme">
+                    <svg id="sun-icon" class="w-4 h-4 hidden dark:block" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
+                    <svg id="moon-icon" class="w-4 h-4 block dark:hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"/></svg>
                 </button>
                 </div>
             </div>
@@ -55,14 +81,14 @@
     </nav>
 
     <!-- Mobile Menu -->
-    <div id="mobile-menu" class="hidden sm:hidden bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800">
-        <div class="max-w-6xl mx-auto px-4 py-3 flex flex-col gap-2">
-            <a href="/" class="text-sm font-medium text-gray-600 dark:text-gray-300 hover:text-brand-600 dark:hover:text-brand-500 transition-colors py-1.5">Collections</a>
-            <a href="/import" class="text-sm font-medium text-gray-600 dark:text-gray-300 hover:text-brand-600 dark:hover:text-brand-500 transition-colors py-1.5">Import</a>
+    <div id="mobile-menu" class="hidden sm:hidden border-b border-white/[0.06] bg-surface-900/90 backdrop-blur-xl">
+        <div class="max-w-6xl mx-auto px-4 py-3 flex flex-col gap-1">
+            <a href="/" class="px-3 py-2 rounded-lg text-sm font-medium text-zinc-300 hover:text-brand-400 hover:bg-white/[0.04] transition-all">Collections</a>
+            <a href="/import" class="px-3 py-2 rounded-lg text-sm font-medium text-zinc-300 hover:text-brand-400 hover:bg-white/[0.04] transition-all">Import</a>
             {% if user is defined and user %}
-            <div class="flex items-center justify-between border-t border-gray-200 dark:border-gray-800 pt-2 mt-1">
-                <span class="text-sm text-gray-600 dark:text-gray-300">{{ user.username }}</span>
-                <button id="mobile-logout-btn" class="text-sm font-medium text-red-500 hover:text-red-600 dark:text-red-400 dark:hover:text-red-300 transition-colors">Logout</button>
+            <div class="flex items-center justify-between border-t border-white/[0.06] pt-2 mt-1 px-3">
+                <span class="text-sm text-zinc-400">{{ user.username }}</span>
+                <button id="mobile-logout-btn" class="text-sm font-medium text-rose-400 hover:text-rose-300 transition-colors">Logout</button>
             </div>
             {% endif %}
         </div>
@@ -70,41 +96,41 @@
 
     <!-- Settings Modal -->
     <div id="settings-modal" class="hidden fixed inset-0 z-[60] flex items-center justify-center">
-        <div id="settings-backdrop" class="absolute inset-0 bg-black/50"></div>
-        <div class="relative bg-white dark:bg-gray-900 rounded-2xl shadow-xl border border-gray-200 dark:border-gray-800 w-full max-w-md mx-4 p-6">
+        <div id="settings-backdrop" class="absolute inset-0 bg-black/60 backdrop-blur-sm"></div>
+        <div class="relative glass-strong rounded-2xl shadow-2xl shadow-black/50 w-full max-w-md mx-4 p-6">
             <div class="flex items-center justify-between mb-4">
-                <h2 class="text-lg font-bold">API Key Settings</h2>
-                <button id="settings-close" class="p-1 rounded-lg text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
+                <h2 class="text-lg font-bold text-zinc-100">Settings</h2>
+                <button id="settings-close" class="p-1.5 rounded-full text-zinc-500 hover:text-zinc-300 hover:bg-white/[0.06] transition-all">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
                 </button>
             </div>
-            <p class="text-sm text-gray-500 dark:text-gray-400 mb-4">Keys are stored in your browser only and sent as headers with each request.</p>
+            <p class="text-sm text-zinc-500 mb-5">Keys are stored in your browser and sent as headers with each request.</p>
             <div class="space-y-4">
                 <div>
-                    <label for="sk-anthropic" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Anthropic API Key</label>
+                    <label for="sk-anthropic" class="block text-xs font-semibold text-zinc-400 uppercase tracking-wider mb-1.5">Anthropic API Key</label>
                     <input type="password" id="sk-anthropic" placeholder="sk-ant-..."
-                           class="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500">
+                           class="w-full rounded-xl bg-white/[0.04] border border-white/[0.08] px-4 py-2.5 text-sm text-zinc-200 placeholder-zinc-600 focus:border-brand-500/50 transition-colors">
                 </div>
                 <div>
-                    <label for="sk-tmdb" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">TMDB API Key</label>
+                    <label for="sk-tmdb" class="block text-xs font-semibold text-zinc-400 uppercase tracking-wider mb-1.5">TMDB API Key</label>
                     <input type="password" id="sk-tmdb" placeholder="your TMDB key..."
-                           class="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500">
+                           class="w-full rounded-xl bg-white/[0.04] border border-white/[0.08] px-4 py-2.5 text-sm text-zinc-200 placeholder-zinc-600 focus:border-brand-500/50 transition-colors">
                 </div>
             </div>
             <div class="flex items-center gap-2 mt-6">
-                <button id="settings-save" class="rounded-lg bg-brand-600 text-white font-medium px-4 py-2 hover:bg-brand-700 transition-colors text-sm">Save</button>
-                <button id="settings-validate" class="rounded-lg border border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-300 font-medium px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors text-sm">Validate</button>
-                <button id="settings-clear" class="ml-auto rounded-lg text-red-500 hover:text-red-600 dark:text-red-400 dark:hover:text-red-300 font-medium px-4 py-2 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors text-sm">Clear</button>
+                <button id="settings-save" class="rounded-xl bg-brand-500 text-surface-950 font-semibold px-5 py-2 hover:bg-brand-400 transition-colors text-sm btn-press">Save</button>
+                <button id="settings-validate" class="rounded-xl border border-white/[0.1] text-zinc-300 font-medium px-5 py-2 hover:bg-white/[0.04] transition-colors text-sm">Validate</button>
+                <button id="settings-clear" class="ml-auto rounded-xl text-rose-400 hover:text-rose-300 font-medium px-4 py-2 hover:bg-rose-500/10 transition-colors text-sm">Clear</button>
             </div>
             <p id="settings-msg" class="mt-3 text-sm hidden"></p>
         </div>
     </div>
 
     <!-- API Key Banner -->
-    <div id="keys-banner" class="hidden bg-yellow-50 dark:bg-yellow-900/20 border-b border-yellow-200 dark:border-yellow-800">
+    <div id="keys-banner" class="hidden bg-brand-500/10 border-b border-brand-500/20">
         <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-2.5 flex items-center justify-between">
-            <p class="text-sm text-yellow-700 dark:text-yellow-300">API keys not configured. AI generation requires Anthropic and TMDB keys.</p>
-            <button onclick="document.getElementById('settings-toggle').click()" class="text-sm font-medium text-yellow-800 dark:text-yellow-200 hover:underline whitespace-nowrap ml-4">Set up keys</button>
+            <p class="text-sm text-brand-300">API keys not configured. AI generation needs Anthropic + TMDB keys.</p>
+            <button onclick="document.getElementById('settings-toggle').click()" class="text-sm font-semibold text-brand-400 hover:text-brand-300 whitespace-nowrap ml-4 transition-colors">Set up</button>
         </div>
     </div>
 
@@ -112,9 +138,13 @@
         {% block content %}{% endblock %}
     </main>
 
-    <footer class="border-t border-gray-200 dark:border-gray-800 py-6">
-        <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-            <p class="text-center text-sm text-gray-400 dark:text-gray-600">Flickvault — AI-powered movie collection manager</p>
+    <footer class="border-t border-white/[0.04] py-8">
+        <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col items-center gap-2">
+            <div class="flex items-center gap-2 text-zinc-600">
+                <span class="text-base">🎬</span>
+                <span class="text-sm font-medium">Flickvault</span>
+            </div>
+            <p class="text-xs text-zinc-700">AI-powered movie collection manager</p>
         </div>
     </footer>
 
@@ -176,8 +206,8 @@
         const tk = tkInput.value.trim();
         if (ak) localStorage.setItem('fv_anthropic_key', ak); else localStorage.removeItem('fv_anthropic_key');
         if (tk) localStorage.setItem('fv_tmdb_key', tk); else localStorage.removeItem('fv_tmdb_key');
-        msg.textContent = 'Keys saved to browser.';
-        msg.className = 'mt-3 text-sm text-green-600 dark:text-green-400';
+        msg.textContent = 'Keys saved.';
+        msg.className = 'mt-3 text-sm text-emerald-400';
         checkKeysBanner();
     });
 
@@ -187,19 +217,18 @@
         akInput.value = '';
         tkInput.value = '';
         msg.textContent = 'Keys cleared.';
-        msg.className = 'mt-3 text-sm text-yellow-600 dark:text-yellow-400';
+        msg.className = 'mt-3 text-sm text-brand-400';
         checkKeysBanner();
     });
 
     document.getElementById('settings-validate').addEventListener('click', async () => {
-        // Temporarily save so headers are sent
         const ak = akInput.value.trim();
         const tk = tkInput.value.trim();
         if (ak) localStorage.setItem('fv_anthropic_key', ak); else localStorage.removeItem('fv_anthropic_key');
         if (tk) localStorage.setItem('fv_tmdb_key', tk); else localStorage.removeItem('fv_tmdb_key');
 
         msg.textContent = 'Validating...';
-        msg.className = 'mt-3 text-sm text-gray-500 dark:text-gray-400';
+        msg.className = 'mt-3 text-sm text-zinc-400';
         try {
             const resp = await fetch('/api/keys/validate', {
                 method: 'POST',
@@ -211,10 +240,10 @@
             parts.push(`TMDB: ${data.tmdb ? 'valid' : 'invalid'}`);
             const allGood = data.anthropic && data.tmdb;
             msg.textContent = parts.join(' | ');
-            msg.className = `mt-3 text-sm ${allGood ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`;
+            msg.className = `mt-3 text-sm ${allGood ? 'text-emerald-400' : 'text-rose-400'}`;
         } catch {
             msg.textContent = 'Validation request failed.';
-            msg.className = 'mt-3 text-sm text-red-600 dark:text-red-400';
+            msg.className = 'mt-3 text-sm text-rose-400';
         }
         checkKeysBanner();
     });

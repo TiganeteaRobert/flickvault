@@ -1,1 +1,84 @@
-/* Movie Manager — Tailwind handles all styling */
+/* Flickvault — Cinema-themed design system */
+
+/* === Font === */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
+
+/* === Card hover === */
+.card-glow {
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.card-glow:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+}
+
+/* === Scrollbar === */
+::-webkit-scrollbar {
+    width: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.2);
+}
+
+/* === Glass morphism === */
+.glass {
+    background: rgba(255, 255, 255, 0.03);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.glass-strong {
+    background: rgba(255, 255, 255, 0.06);
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* === Poster card overlay === */
+.poster-overlay {
+    background: linear-gradient(
+        to top,
+        rgba(9, 9, 11, 0.95) 0%,
+        rgba(9, 9, 11, 0.7) 40%,
+        rgba(9, 9, 11, 0) 100%
+    );
+}
+
+/* === Focus styles === */
+input:focus, select:focus, textarea:focus {
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(251, 191, 36, 0.4);
+}
+
+/* === AI hero background === */
+.mesh-gradient {
+    background:
+        radial-gradient(ellipse at 20% 50%, rgba(251, 191, 36, 0.12) 0%, transparent 50%),
+        radial-gradient(ellipse at 80% 20%, rgba(168, 85, 247, 0.1) 0%, transparent 50%),
+        linear-gradient(135deg, #1a1025 0%, #0f0a1a 50%, #0a0f1a 100%);
+}
+
+/* === Text gradient === */
+.text-gradient {
+    background: linear-gradient(135deg, #fbbf24, #f59e0b, #f97316);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+/* === Button press === */
+.btn-press:active {
+    transform: scale(0.97);
+}

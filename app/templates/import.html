@@ -3,42 +3,49 @@
 {% block title %}Import — Flickvault{% endblock %}
 
 {% block content %}
-<a href="/" class="text-sm text-gray-500 dark:text-gray-400 hover:text-brand-600 dark:hover:text-brand-500 transition-colors mb-4 inline-block">&larr; All Collections</a>
+<a href="/" class="inline-flex items-center gap-1.5 text-sm text-zinc-500 hover:text-brand-400 transition-colors mb-4">
+    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
+    Back to vault
+</a>
 
-<h1 class="text-2xl font-bold mb-2">Import Movies from JSON</h1>
-<p class="text-gray-500 dark:text-gray-400 mb-6 text-sm">Upload a JSON file containing movie data. Supports trakt-watchlist format and plain arrays of movie objects.</p>
+<div class="mb-8">
+    <h1 class="text-2xl sm:text-3xl font-extrabold text-zinc-100 mb-2">Import Movies</h1>
+    <p class="text-zinc-500 text-sm">Upload a JSON file with movie data. Supports Trakt watchlist format and plain arrays.</p>
+</div>
 
 {% if not collections %}
-<div class="rounded-lg bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 px-4 py-3 text-yellow-700 dark:text-yellow-300 text-sm">
-    No collections exist yet. <a href="/" class="font-medium underline">Create one first</a>.
+<div class="rounded-xl bg-brand-500/10 border border-brand-500/20 px-5 py-4 text-brand-300 text-sm">
+    No collections exist yet. <a href="/" class="font-semibold text-brand-400 hover:text-brand-300 transition-colors">Create one first</a>.
 </div>
 {% else %}
 <div class="max-w-xl">
-    <form id="import-form" class="space-y-4">
-        <div>
-            <label for="collection" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Collection</label>
-            <select name="collection_id" id="collection" required
-                    class="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500">
-                {% for c in collections %}
-                <option value="{{ c.id }}">{{ c.name }} ({{ c.movie_count }} movies)</option>
-                {% endfor %}
-            </select>
-        </div>
+    <div class="glass-strong rounded-2xl p-6">
+        <form id="import-form" class="space-y-5">
+            <div>
+                <label for="collection" class="block text-xs font-semibold text-zinc-400 uppercase tracking-wider mb-1.5">Collection</label>
+                <select name="collection_id" id="collection" required
+                        class="w-full rounded-xl bg-white/[0.04] border border-white/[0.08] px-4 py-2.5 text-sm text-zinc-200 focus:border-brand-500/50 transition-colors appearance-none cursor-pointer">
+                    {% for c in collections %}
+                    <option value="{{ c.id }}">{{ c.name }} ({{ c.movie_count }} movies)</option>
+                    {% endfor %}
+                </select>
+            </div>
 
-        <div>
-            <label for="file" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">JSON File</label>
-            <input type="file" name="file" id="file" accept=".json" required
-                   class="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 px-4 py-2.5 text-sm file:mr-4 file:rounded-lg file:border-0 file:bg-brand-100 file:dark:bg-brand-900/40 file:text-brand-700 file:dark:text-brand-400 file:px-4 file:py-1.5 file:text-sm file:font-medium focus:outline-none focus:ring-2 focus:ring-brand-500">
-        </div>
+            <div>
+                <label for="file" class="block text-xs font-semibold text-zinc-400 uppercase tracking-wider mb-1.5">JSON File</label>
+                <input type="file" name="file" id="file" accept=".json" required
+                       class="w-full rounded-xl bg-white/[0.04] border border-white/[0.08] px-4 py-2.5 text-sm text-zinc-200 file:mr-4 file:rounded-lg file:border-0 file:bg-brand-500/20 file:text-brand-400 file:px-4 file:py-1.5 file:text-sm file:font-semibold file:cursor-pointer focus:border-brand-500/50 transition-colors">
+            </div>
 
-        <button type="submit" id="import-btn"
-                class="w-full sm:w-auto rounded-lg bg-brand-600 text-white font-medium px-6 py-2.5 hover:bg-brand-700 transition-colors text-sm flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed">
-            <span id="import-btn-text">Import</span>
-            <svg id="import-spinner" class="hidden animate-spin w-4 h-4" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" fill="none"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
-        </button>
-    </form>
+            <button type="submit" id="import-btn"
+                    class="w-full sm:w-auto rounded-xl bg-brand-500 text-surface-950 font-bold px-7 py-2.5 hover:bg-brand-400 hover:shadow-lg hover:shadow-brand-500/20 transition-all text-sm flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed btn-press">
+                <span id="import-btn-text">Import</span>
+                <svg id="import-spinner" class="hidden animate-spin w-4 h-4" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" fill="none"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
+            </button>
+        </form>
+    </div>
 
-    <div id="result" class="hidden mt-6 rounded-lg px-4 py-3 text-sm"></div>
+    <div id="result" class="hidden mt-6 rounded-xl px-5 py-3.5 text-sm"></div>
 </div>
 
 <script>
@@ -69,13 +76,13 @@ document.getElementById('import-form').addEventListener('submit', async (e) => {
     spinner.classList.add('hidden');
 
     const resultDiv = document.getElementById('result');
-    resultDiv.classList.remove('hidden', 'bg-green-50', 'dark:bg-green-900/20', 'border-green-200', 'dark:border-green-800', 'text-green-700', 'dark:text-green-300', 'bg-red-50', 'dark:bg-red-900/20', 'border-red-200', 'dark:border-red-800', 'text-red-700', 'dark:text-red-300');
+    resultDiv.className = 'mt-6 rounded-xl px-5 py-3.5 text-sm';
 
     if (resp.ok) {
-        resultDiv.classList.add('bg-green-50', 'dark:bg-green-900/20', 'border', 'border-green-200', 'dark:border-green-800', 'text-green-700', 'dark:text-green-300');
-        resultDiv.innerHTML = `<strong>${data.added}</strong> added, <strong>${data.skipped}</strong> already existed (${data.total} total). <a href="/collections/${collectionId}" class="font-medium underline">View collection</a>`;
+        resultDiv.classList.add('bg-emerald-500/10', 'border', 'border-emerald-500/20', 'text-emerald-300');
+        resultDiv.innerHTML = `<strong>${data.added}</strong> added, <strong>${data.skipped}</strong> already existed (${data.total} total). <a href="/collections/${collectionId}" class="font-semibold text-emerald-400 hover:text-emerald-300 transition-colors">View collection</a>`;
     } else {
-        resultDiv.classList.add('bg-red-50', 'dark:bg-red-900/20', 'border', 'border-red-200', 'dark:border-red-800', 'text-red-700', 'dark:text-red-300');
+        resultDiv.classList.add('bg-rose-500/10', 'border', 'border-rose-500/20', 'text-rose-300');
         resultDiv.textContent = data.detail || 'Import failed';
     }
 });
