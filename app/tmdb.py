@@ -229,6 +229,32 @@ def _fetch_imdb_id_tv(tmdb_id: str, api_key: str | None = None) -> str | None:
         return None
 
 
+def get_trailer_key(tmdb_id: str, media_type: str = "movie", api_key: str | None = None) -> str | None:
+    """Return the YouTube key of the first official trailer from TMDB, or None."""
+    key = api_key or TMDB_API_KEY
+    if not key:
+        return None
+    endpoint = "tv" if media_type == "show" else "movie"
+    try:
+        resp = httpx.get(
+            f"{TMDB_BASE_URL}/{endpoint}/{tmdb_id}/videos",
+            params={"api_key": key},
+            timeout=10,
+        )
+        resp.raise_for_status()
+        videos = resp.json().get("results", [])
+        # Prefer official trailers, fall back to any trailer
+        for v in videos:
+            if v.get("site") == "YouTube" and v.get("type") == "Trailer" and v.get("official"):
+                return v["key"]
+        for v in videos:
+            if v.get("site") == "YouTube" and v.get("type") == "Trailer":
+                return v["key"]
+        return None
+    except httpx.HTTPError:
+        return None
+
+
 def search_media(title: str, year: int | None = None, media_type: str = "movie", api_key: str | None = None) -> dict | None:
     """Dispatch to search_movie or search_show based on media_type."""
     if media_type == "show":

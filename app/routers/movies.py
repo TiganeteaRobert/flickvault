@@ -8,7 +8,7 @@ from app.schemas import MovieCreate, MovieOut, MovieBatchCreate, MovieSearchResu
 from app.dependencies import get_current_user, get_api_keys, APIKeys
 from app.models import User, Movie
 from app import crud
-from app.tmdb import get_media_details
+from app.tmdb import get_media_details, get_trailer_key
 
 router = APIRouter(tags=["movies"])
 
@@ -57,6 +57,7 @@ def movie_details(movie_id: int, db: Session = Depends(get_db), user: User = Dep
         details = get_media_details(movie.tmdb_id, media_type=movie.media_type, api_key=keys.tmdb_key)
         if details:
             result.update(details)
+        result["trailer_key"] = get_trailer_key(movie.tmdb_id, media_type=movie.media_type, api_key=keys.tmdb_key)
 
     return result
 

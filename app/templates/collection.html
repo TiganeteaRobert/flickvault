@@ -162,6 +162,10 @@
                 <!-- Links & Actions -->
                 <div class="px-6 mt-6 pb-6">
                     <div class="flex items-center gap-3 mb-3">
+                        <a id="modal-trailer-link" href="#" target="_blank" class="hidden inline-flex items-center gap-1.5 text-sm font-bold text-rose-400 hover:text-rose-300 transition-colors">
+                            <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+                            Trailer
+                        </a>
                         <a id="modal-imdb-link" href="#" target="_blank" class="hidden text-sm font-bold text-brand-400 hover:text-brand-300 transition-colors">IMDb</a>
                         <a id="modal-tmdb-link" href="#" target="_blank" class="hidden text-sm font-bold text-blue-400 hover:text-blue-300 transition-colors">TMDB</a>
                     </div>
@@ -394,8 +398,15 @@ async function openMovieModal(movieId, cardEl) {
         }
 
         // Links
+        const trailerLink = document.getElementById('modal-trailer-link');
         const imdbLink = document.getElementById('modal-imdb-link');
         const tmdbLink = document.getElementById('modal-tmdb-link');
+        if (m.trailer_key) {
+            trailerLink.href = `https://www.youtube.com/watch?v=${m.trailer_key}`;
+            trailerLink.classList.remove('hidden');
+        } else {
+            trailerLink.classList.add('hidden');
+        }
         if (m.imdb_id) {
             imdbLink.href = `https://www.imdb.com/title/${m.imdb_id}/`;
             imdbLink.classList.remove('hidden');
