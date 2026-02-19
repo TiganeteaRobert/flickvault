@@ -1,6 +1,7 @@
 """AI-powered collection generation using Claude + TMDB enrichment."""
 
 import json
+from collections.abc import Generator
 
 import anthropic
 
@@ -39,7 +40,7 @@ Rules:
 - Order {item_label}s by relevance to the prompt{rating_rule}"""
 
 
-def generate_collection(
+def generate_collection_iter(
     prompt: str,
     movie_count: int = 10,
     anthropic_key: str | None = None,
@@ -47,14 +48,12 @@ def generate_collection(
     media_type: str = "movie",
     min_rating: float | None = None,
     exclude_titles: list[str] | None = None,
-) -> dict:
-    """Call Claude to generate a collection, then enrich with TMDB data.
+) -> Generator[dict, None, None]:
+    """Generator that yields progress events and a final result.
 
-    Returns:
-        {"name": str, "description": str, "movies": [MovieCreate-compatible dicts]}
-
-    Raises:
-        ValueError: If API key is missing or Claude returns invalid data.
+    Yields:
+        {"type": "progress", "found": int, "needed": int} — after each round if more are needed
+        {"type": "result", "name": str, "description": str, "movies": list} — final result
     """
     ak = anthropic_key or ANTHROPIC_API_KEY
     if not ak:
@@ -64,68 +63,107 @@ def generate_collection(
     items_key = "shows" if media_type == "show" else "movies"
 
     client = anthropic.Anthropic(api_key=ak)
+    system = _system_prompt(media_type, min_rating)
 
-    # Request extra items when filtering by rating so we're more likely to hit the target count
-    request_count = movie_count + 5 if min_rating is not None else movie_count
-    user_message = f"{prompt}\n\nPlease return exactly {request_count} {item_label}."
+    all_exclude = set(exclude_titles or [])
+    accepted: list[dict] = []
+    collection_name = ""
+    collection_desc = ""
+    max_rounds = 5 if min_rating is not None else 1
 
-    if exclude_titles:
-        titles_list = ", ".join(f'"{t}"' for t in exclude_titles)
-        user_message += f"\n\nIMPORTANT: Do NOT include any of these titles (they are already in related collections): {titles_list}"
+    for round_num in range(max_rounds):
+        still_needed = movie_count - len(accepted)
+        if still_needed <= 0:
+            break
 
-    response = client.messages.create(
-        model="claude-sonnet-4-5-20250929",
-        max_tokens=2048,
-        system=_system_prompt(media_type, min_rating),
-        messages=[{"role": "user", "content": user_message}],
-    )
+        # Ask for extra on each round to compensate for filtering
+        request_count = still_needed + 5 if min_rating is not None else still_needed
+        user_message = f"{prompt}\n\nPlease return exactly {request_count} {item_label}."
 
-    raw_text = response.content[0].text.strip()
-    # Strip markdown fences if present
-    if raw_text.startswith("```"):
-        raw_text = raw_text.split("\n", 1)[1]
-        if raw_text.endswith("```"):
-            raw_text = raw_text[: raw_text.rfind("```")]
+        if all_exclude:
+            titles_list = ", ".join(f'"{t}"' for t in all_exclude)
+            user_message += f"\n\nIMPORTANT: Do NOT include any of these titles (they are already in related collections or previous results): {titles_list}"
 
-    try:
-        data = json.loads(raw_text)
-    except json.JSONDecodeError as e:
-        raise ValueError(f"Claude returned invalid JSON: {e}")
+        response = client.messages.create(
+            model="claude-sonnet-4-5-20250929",
+            max_tokens=2048,
+            system=system,
+            messages=[{"role": "user", "content": user_message}],
+        )
 
-    if "name" not in data or (items_key not in data and "movies" not in data):
-        raise ValueError(f"Claude response missing required fields (name, {items_key})")
+        raw_text = response.content[0].text.strip()
+        if raw_text.startswith("```"):
+            raw_text = raw_text.split("\n", 1)[1]
+            if raw_text.endswith("```"):
+                raw_text = raw_text[: raw_text.rfind("```")]
 
-    items = data.get(items_key) or data.get("movies", [])
+        try:
+            data = json.loads(raw_text)
+        except json.JSONDecodeError as e:
+            raise ValueError(f"Claude returned invalid JSON: {e}")
 
-    # Enrich each item with TMDB data
-    enriched_movies = []
-    for item in items:
-        title = item.get("title", "")
-        year = item.get("year")
+        if "name" not in data or (items_key not in data and "movies" not in data):
+            raise ValueError(f"Claude response missing required fields (name, {items_key})")
 
-        movie_data = {"title": title, "year": year, "overview": "", "poster_url": "", "media_type": media_type}
+        # Keep name/description from the first round
+        if round_num == 0:
+            collection_name = data["name"]
+            collection_desc = data.get("description", "")
 
-        tmdb_result = search_media(title, year, media_type=media_type, api_key=tmdb_key)
-        if tmdb_result:
-            movie_data["tmdb_id"] = tmdb_result["tmdb_id"]
-            movie_data["imdb_id"] = tmdb_result["imdb_id"]
-            movie_data["poster_url"] = tmdb_result["poster_url"]
-            movie_data["overview"] = tmdb_result["overview"]
-            movie_data["rating"] = tmdb_result["rating"]
+        items = data.get(items_key) or data.get("movies", [])
 
-        enriched_movies.append(movie_data)
+        for item in items:
+            title = item.get("title", "")
+            year = item.get("year")
 
-    # Filter by minimum rating if requested
-    if min_rating is not None:
-        enriched_movies = [
-            m for m in enriched_movies
-            if m.get("rating") is not None and m["rating"] >= min_rating
-        ]
-        # Trim back to the originally requested count
-        enriched_movies = enriched_movies[:movie_count]
+            movie_data = {"title": title, "year": year, "overview": "", "poster_url": "", "media_type": media_type}
 
-    return {
-        "name": data["name"],
-        "description": data.get("description", ""),
-        "movies": enriched_movies,
+            tmdb_result = search_media(title, year, media_type=media_type, api_key=tmdb_key)
+            if tmdb_result:
+                movie_data["tmdb_id"] = tmdb_result["tmdb_id"]
+                movie_data["imdb_id"] = tmdb_result["imdb_id"]
+                movie_data["poster_url"] = tmdb_result["poster_url"]
+                movie_data["overview"] = tmdb_result["overview"]
+                movie_data["rating"] = tmdb_result["rating"]
+
+            # Always exclude this title from future rounds
+            all_exclude.add(title)
+
+            # Apply rating filter
+            if min_rating is not None:
+                if movie_data.get("rating") is None or movie_data["rating"] < min_rating:
+                    continue
+
+            accepted.append(movie_data)
+            if len(accepted) >= movie_count:
+                break
+
+        # If we still need more and have rounds left, yield progress
+        if len(accepted) < movie_count and round_num < max_rounds - 1:
+            yield {"type": "progress", "found": len(accepted), "needed": movie_count}
+
+    yield {
+        "type": "result",
+        "name": collection_name,
+        "description": collection_desc,
+        "movies": accepted[:movie_count],
     }
+
+
+def generate_collection(
+    prompt: str,
+    movie_count: int = 10,
+    anthropic_key: str | None = None,
+    tmdb_key: str | None = None,
+    media_type: str = "movie",
+    min_rating: float | None = None,
+    exclude_titles: list[str] | None = None,
+) -> dict:
+    """Non-streaming wrapper. Returns the final result dict."""
+    for event in generate_collection_iter(
+        prompt, movie_count, anthropic_key=anthropic_key, tmdb_key=tmdb_key,
+        media_type=media_type, min_rating=min_rating, exclude_titles=exclude_titles,
+    ):
+        if event["type"] == "result":
+            return {"name": event["name"], "description": event["description"], "movies": event["movies"]}
+    raise ValueError("Generation produced no result")

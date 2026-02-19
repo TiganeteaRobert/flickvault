@@ -301,13 +301,19 @@ def generate_collection(user_id: int, prompt: str, movie_count: int = 10, media_
     try:
         exclude_titles = []
         parent_id = None
+        effective_min_rating = min_rating
         if source_collection_id:
             exclude_titles = crud.get_ancestor_movie_titles(db, source_collection_id, user_id)
             parent_id = source_collection_id
-        result = ai_generate_collection(prompt, movie_count, media_type=media_type, min_rating=min_rating, exclude_titles=exclude_titles or None)
+            if effective_min_rating is None:
+                source = crud.get_collection(db, source_collection_id, user_id)
+                if source and source.min_rating is not None:
+                    effective_min_rating = source.min_rating
+        result = ai_generate_collection(prompt, movie_count, media_type=media_type, min_rating=effective_min_rating, exclude_titles=exclude_titles or None)
         collection = crud.create_collection(
             db, CollectionCreate(name=result["name"], description=result["description"], media_type=media_type), user_id,
             parent_id=parent_id,
+            min_rating=effective_min_rating,
         )
         movie_creates = [MovieCreate(**m) for m in result["movies"]]
         batch_result = crud.add_movies_batch(db, collection.id, movie_creates, user_id)

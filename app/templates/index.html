@@ -129,9 +129,17 @@
                 {% endif %}
             </span>
 
+            {% if c.min_rating %}
+            <!-- Rating filter badge -->
+            <span class="absolute top-3 left-auto right-12 inline-flex items-center gap-0.5 rounded-full bg-brand-500/70 backdrop-blur-md px-2 py-0.5 text-[10px] font-bold text-white border border-brand-400/30">
+                <svg class="w-2.5 h-2.5" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/></svg>
+                {{ "%.1f"|format(c.min_rating) }}+
+            </span>
+            {% endif %}
+
             {% if c.media_type == "show" %}
             <!-- TV badge -->
-            <span class="absolute top-3 left-auto right-12 inline-flex items-center rounded-full bg-indigo-500/70 backdrop-blur-md px-2 py-0.5 text-[10px] font-bold text-white border border-indigo-400/30">TV</span>
+            <span class="absolute top-3 left-auto {% if c.min_rating %}right-[5.5rem]{% else %}right-12{% endif %} inline-flex items-center rounded-full bg-indigo-500/70 backdrop-blur-md px-2 py-0.5 text-[10px] font-bold text-white border border-indigo-400/30">TV</span>
             {% endif %}
 
             <!-- Delete button -->
@@ -233,15 +241,37 @@ document.getElementById('generate-form').addEventListener('submit', async (e) =>
                 min_rating: document.getElementById('gen-min-rating').value ? parseFloat(document.getElementById('gen-min-rating').value) : null
             })
         });
-        const data = await resp.json();
-        if (resp.ok) {
-            window.location.href = `/collections/${data.id}`;
-        } else {
-            errorEl.textContent = data.detail || 'Generation failed. Please try again.';
-            errorEl.classList.remove('hidden');
+
+        const reader = resp.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = '';
+
+        while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            buffer += decoder.decode(value, { stream: true });
+            const parts = buffer.split('\n\n');
+            buffer = parts.pop();
+            for (const part of parts) {
+                let eventType = '', eventData = '';
+                for (const line of part.split('\n')) {
+                    if (line.startsWith('event: ')) eventType = line.slice(7);
+                    else if (line.startsWith('data: ')) eventData = line.slice(6);
+                }
+                if (!eventData) continue;
+                const parsed = JSON.parse(eventData);
+                if (eventType === 'progress') {
+                    btnText.textContent = `Found ${parsed.found}/${parsed.needed}, searching for more...`;
+                } else if (eventType === 'complete') {
+                    window.location.href = `/collections/${parsed.id}`;
+                    return;
+                } else if (eventType === 'error') {
+                    throw new Error(parsed.detail || 'Generation failed');
+                }
+            }
         }
     } catch (err) {
-        errorEl.textContent = 'Network error. Please try again.';
+        errorEl.textContent = err.message || 'Network error. Please try again.';
         errorEl.classList.remove('hidden');
     } finally {
         btn.disabled = false;

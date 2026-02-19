@@ -61,6 +61,28 @@ def movie_details(movie_id: int, db: Session = Depends(get_db), user: User = Dep
     return result
 
 
+@router.post("/api/movies/{movie_id}/add-to/{collection_id}", status_code=201)
+def add_movie_to_another_collection(movie_id: int, collection_id: int, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    movie = db.query(Movie).filter(Movie.id == movie_id).first()
+    if not movie:
+        raise HTTPException(status_code=404, detail="Movie not found")
+    data = MovieCreate(
+        title=movie.title,
+        year=movie.year,
+        trakt_id=movie.trakt_id,
+        imdb_id=movie.imdb_id,
+        tmdb_id=movie.tmdb_id,
+        overview=movie.overview,
+        poster_url=movie.poster_url,
+        rating=movie.rating,
+        media_type=movie.media_type,
+    )
+    result = crud.add_movie_to_collection(db, collection_id, data, user.id)
+    if "error" in result:
+        raise HTTPException(status_code=400, detail=result["error"])
+    return {"added": result["added"]}
+
+
 @router.get("/api/movies/search", response_model=list[MovieSearchResult])
 def search_movies(q: str, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
     return crud.search_movies(db, q, user.id)

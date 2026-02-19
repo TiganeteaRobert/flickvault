@@ -44,13 +44,17 @@ def _run_migrations():
                     f"ALTER TABLE {table} ADD COLUMN media_type VARCHAR(10) NOT NULL DEFAULT 'movie'"
                 ))
 
-        # Add parent_id to collections for "More like this" lineage
+        # Add parent_id and min_rating to collections
         col_names = [
             row[1] for row in conn.execute(text("PRAGMA table_info(collections)")).fetchall()
         ]
         if "parent_id" not in col_names:
             conn.execute(text(
                 "ALTER TABLE collections ADD COLUMN parent_id INTEGER REFERENCES collections(id) ON DELETE SET NULL"
+            ))
+        if "min_rating" not in col_names:
+            conn.execute(text(
+                "ALTER TABLE collections ADD COLUMN min_rating FLOAT"
             ))
 
         conn.commit()

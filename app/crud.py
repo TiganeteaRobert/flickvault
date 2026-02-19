@@ -7,8 +7,8 @@ from app.schemas import CollectionCreate, CollectionUpdate, MovieCreate
 
 # --- Collections ---
 
-def create_collection(db: Session, data: CollectionCreate, user_id: int, parent_id: int | None = None) -> Collection:
-    collection = Collection(name=data.name, description=data.description, media_type=data.media_type, user_id=user_id, parent_id=parent_id)
+def create_collection(db: Session, data: CollectionCreate, user_id: int, parent_id: int | None = None, min_rating: float | None = None) -> Collection:
+    collection = Collection(name=data.name, description=data.description, media_type=data.media_type, user_id=user_id, parent_id=parent_id, min_rating=min_rating)
     db.add(collection)
     db.commit()
     db.refresh(collection)
@@ -21,7 +21,7 @@ def get_collections(db: Session, user_id: int) -> list[dict]:
         .outerjoin(CollectionMovie)
         .filter(Collection.user_id == user_id)
         .group_by(Collection.id)
-        .order_by(Collection.name)
+        .order_by(Collection.created_at.desc())
         .all()
     )
     results = []
@@ -31,6 +31,7 @@ def get_collections(db: Session, user_id: int) -> list[dict]:
             "name": collection.name,
             "description": collection.description,
             "media_type": collection.media_type,
+            "min_rating": collection.min_rating,
             "created_at": collection.created_at,
             "updated_at": collection.updated_at,
             "movie_count": count,
@@ -88,6 +89,7 @@ def get_collection_with_movies(db: Session, collection_id: int, user_id: int) ->
         "name": collection.name,
         "description": collection.description,
         "media_type": collection.media_type,
+        "min_rating": collection.min_rating,
         "created_at": collection.created_at,
         "updated_at": collection.updated_at,
         "movie_count": len(movies),

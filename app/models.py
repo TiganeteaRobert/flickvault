@@ -30,6 +30,7 @@ class Collection(Base):
     description = Column(Text, default="")
     media_type = Column(String(10), nullable=False, default="movie")
     parent_id = Column(Integer, ForeignKey("collections.id", ondelete="SET NULL"), nullable=True)
+    min_rating = Column(Float, nullable=True)
     user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
     updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc),

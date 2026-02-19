@@ -22,6 +22,12 @@
                 {{ collection.movie_count }} movie{{ "s" if collection.movie_count != 1 else "" }}
                 {% endif %}
             </span>
+            {% if collection.min_rating %}
+            <span class="inline-flex items-center gap-1 rounded-full bg-brand-500/10 border border-brand-500/20 px-3.5 py-1 text-sm font-bold text-brand-400">
+                <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/></svg>
+                {{ "%.1f"|format(collection.min_rating) }}+
+            </span>
+            {% endif %}
             <button id="delete-toggle" class="text-sm font-medium text-zinc-500 hover:text-rose-400 transition-colors">Delete</button>
         </div>
     </div>
@@ -40,7 +46,7 @@
 {% if collection.movies %}
 <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
     {% for movie in collection.movies %}
-    <div class="group relative rounded-xl overflow-hidden card-glow bg-surface-900 cursor-pointer" onclick="openMovieModal({{ movie.id }})">
+    <div class="group relative rounded-xl overflow-hidden card-glow bg-surface-900 cursor-pointer" onclick="openMovieModal({{ movie.id }}, this)">
         <!-- Poster -->
         {% if movie.poster_url %}
         <div class="aspect-[2/3] bg-surface-850 overflow-hidden">
@@ -159,6 +165,16 @@
                         <a id="modal-imdb-link" href="#" target="_blank" class="hidden text-sm font-bold text-brand-400 hover:text-brand-300 transition-colors">IMDb</a>
                         <a id="modal-tmdb-link" href="#" target="_blank" class="hidden text-sm font-bold text-blue-400 hover:text-blue-300 transition-colors">TMDB</a>
                     </div>
+                    <!-- Move to collection -->
+                    <div class="flex gap-2 mb-2">
+                        <select id="modal-move-target" class="flex-1 rounded-xl px-3 py-2 bg-white/[0.04] border border-white/[0.08] text-sm text-zinc-400 focus:border-brand-500/50 transition-colors appearance-none cursor-pointer">
+                            <option value="">Move to collection…</option>
+                        </select>
+                        <button id="modal-move-btn" onclick="moveToCollection()" class="inline-flex items-center gap-1.5 text-sm font-semibold text-zinc-400 hover:text-zinc-200 transition-colors btn-press shrink-0 px-3 py-2 rounded-xl hover:bg-white/[0.04]" disabled>
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/></svg>
+                            Move
+                        </button>
+                    </div>
                     <div class="flex gap-2">
                         <input type="text" id="modal-similar-extra" placeholder="e.g. &quot;but darker&quot; or &quot;more comedic&quot;" class="flex-1 rounded-xl px-3 py-2 bg-white/[0.04] border border-white/[0.08] text-sm text-zinc-200 placeholder-zinc-600 focus:border-brand-500/50 transition-colors">
                         <button id="modal-similar-btn" onclick="findSimilarMovies()" class="inline-flex items-center gap-1.5 text-sm font-semibold text-brand-400 hover:text-brand-300 transition-colors btn-press shrink-0 px-3 py-2 rounded-xl hover:bg-white/[0.04]">
@@ -212,12 +228,38 @@ const modalBody = document.getElementById('modal-body');
 let currentMovieTitle = '';
 let currentMovieYear = null;
 let currentMediaType = '{{ collection.media_type }}';
+let currentMovieId = null;
+let currentMovieCardEl = null;
 
-async function openMovieModal(movieId) {
+// Move-to dropdown
+const moveTarget = document.getElementById('modal-move-target');
+const moveBtn = document.getElementById('modal-move-btn');
+moveTarget.addEventListener('change', () => {
+    moveBtn.disabled = !moveTarget.value;
+});
+
+async function openMovieModal(movieId, cardEl) {
+    currentMovieId = movieId;
+    currentMovieCardEl = cardEl || null;
     movieModal.classList.remove('hidden');
     modalLoading.classList.remove('hidden');
     modalBody.classList.add('hidden');
     document.body.style.overflow = 'hidden';
+
+    // Reset move dropdown
+    moveTarget.innerHTML = '<option value="">Move to collection…</option>';
+    moveBtn.disabled = true;
+
+    // Populate collections dropdown (exclude current)
+    fetch('/api/collections').then(r => r.json()).then(cols => {
+        cols.filter(c => c.id !== {{ collection.id }} && c.media_type === currentMediaType)
+            .forEach(c => {
+                const opt = document.createElement('option');
+                opt.value = c.id;
+                opt.textContent = c.name;
+                moveTarget.appendChild(opt);
+            });
+    });
 
     try {
         const resp = await fetch(`/api/movies/${movieId}/details`, { headers: {  } });
@@ -396,16 +438,72 @@ async function findSimilarMovies() {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ prompt, movie_count: 10, collection_name: collectionName, media_type: currentMediaType, source_collection_id: {{ collection.id }} }),
         });
-        if (!resp.ok) {
-            const err = await resp.json().catch(() => ({}));
-            throw new Error(err.detail || 'Generation failed');
+
+        const reader = resp.body.getReader();
+        const decoder = new TextDecoder();
+        let sseBuffer = '';
+
+        while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            sseBuffer += decoder.decode(value, { stream: true });
+            const parts = sseBuffer.split('\n\n');
+            sseBuffer = parts.pop();
+            for (const part of parts) {
+                let eventType = '', eventData = '';
+                for (const line of part.split('\n')) {
+                    if (line.startsWith('event: ')) eventType = line.slice(7);
+                    else if (line.startsWith('data: ')) eventData = line.slice(6);
+                }
+                if (!eventData) continue;
+                const parsed = JSON.parse(eventData);
+                if (eventType === 'progress') {
+                    btn.innerHTML = `<svg class="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg> Found ${parsed.found}/${parsed.needed}, searching for more...`;
+                } else if (eventType === 'complete') {
+                    window.location.href = `/collections/${parsed.id}`;
+                    return;
+                } else if (eventType === 'error') {
+                    throw new Error(parsed.detail || 'Generation failed');
+                }
+            }
         }
-        const data = await resp.json();
-        window.location.href = `/collections/${data.id}`;
     } catch (e) {
         btn.innerHTML = origHtml;
         btn.disabled = false;
         alert(e.message || 'Failed to generate similar items. Check your API keys in settings.');
+    }
+}
+
+async function moveToCollection() {
+    const targetId = moveTarget.value;
+    if (!targetId || !currentMovieId) return;
+
+    moveBtn.disabled = true;
+    const origHtml = moveBtn.innerHTML;
+    moveBtn.innerHTML = `<svg class="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>`;
+
+    try {
+        // Add to target collection
+        const addResp = await fetch(`/api/movies/${currentMovieId}/add-to/${targetId}`, { method: 'POST' });
+        if (!addResp.ok) {
+            const err = await addResp.json();
+            alert(err.detail || 'Failed to add to collection');
+            moveBtn.innerHTML = origHtml;
+            moveBtn.disabled = false;
+            return;
+        }
+
+        // Remove from current collection
+        await fetch(`/api/collections/{{ collection.id }}/movies/${currentMovieId}`, { method: 'DELETE' });
+
+        // Remove card from the grid
+        if (currentMovieCardEl) currentMovieCardEl.remove();
+
+        closeMovieModal();
+    } catch {
+        moveBtn.innerHTML = origHtml;
+        moveBtn.disabled = false;
+        alert('Network error. Please try again.');
     }
 }
 
