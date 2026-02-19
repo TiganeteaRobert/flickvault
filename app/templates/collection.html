@@ -111,10 +111,14 @@
 
             <!-- Content (filled by JS) -->
             <div id="modal-body" class="hidden">
-                <!-- Backdrop -->
+                <!-- Backdrop / Trailer player -->
                 <div id="modal-backdrop-img" class="relative h-48 sm:h-64 bg-surface-850 overflow-hidden">
                     <img id="modal-backdrop" src="" alt="" class="w-full h-full object-cover opacity-50">
                     <div class="absolute inset-0 bg-gradient-to-t from-surface-900 via-surface-900/50 to-transparent"></div>
+                </div>
+                <!-- YouTube embed (hidden until trailer is played) -->
+                <div id="modal-trailer-container" class="hidden relative w-full bg-black" style="aspect-ratio: 16/9;">
+                    <div id="modal-trailer-iframe-wrap" class="w-full h-full"></div>
                 </div>
                 <div id="modal-no-backdrop" class="hidden h-24 bg-gradient-to-b from-surface-800 to-surface-900"></div>
 
@@ -162,10 +166,10 @@
                 <!-- Links & Actions -->
                 <div class="px-6 mt-6 pb-6">
                     <div class="flex items-center gap-3 mb-3">
-                        <a id="modal-trailer-link" href="#" target="_blank" class="hidden inline-flex items-center gap-1.5 text-sm font-bold text-rose-400 hover:text-rose-300 transition-colors">
+                        <button id="modal-trailer-btn" onclick="playTrailer()" class="hidden inline-flex items-center gap-1.5 text-sm font-bold text-rose-400 hover:text-rose-300 transition-colors">
                             <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
-                            Trailer
-                        </a>
+                            <span id="modal-trailer-btn-text">Watch Trailer</span>
+                        </button>
                         <a id="modal-imdb-link" href="#" target="_blank" class="hidden text-sm font-bold text-brand-400 hover:text-brand-300 transition-colors">IMDb</a>
                         <a id="modal-tmdb-link" href="#" target="_blank" class="hidden text-sm font-bold text-blue-400 hover:text-blue-300 transition-colors">TMDB</a>
                     </div>
@@ -234,6 +238,7 @@ let currentMovieYear = null;
 let currentMediaType = '{{ collection.media_type }}';
 let currentMovieId = null;
 let currentMovieCardEl = null;
+let currentTrailerKey = null;
 
 // Move-to dropdown
 const moveTarget = document.getElementById('modal-move-target');
@@ -249,6 +254,14 @@ async function openMovieModal(movieId, cardEl) {
     modalLoading.classList.remove('hidden');
     modalBody.classList.add('hidden');
     document.body.style.overflow = 'hidden';
+
+    // Reset trailer
+    currentTrailerKey = null;
+    document.getElementById('modal-trailer-iframe-wrap').innerHTML = '';
+    document.getElementById('modal-trailer-container').classList.add('hidden');
+    const trailerBtn = document.getElementById('modal-trailer-btn');
+    trailerBtn.onclick = playTrailer;
+    document.getElementById('modal-trailer-btn-text').textContent = 'Watch Trailer';
 
     // Reset move dropdown
     moveTarget.innerHTML = '<option value="">Move to collection…</option>';
@@ -398,14 +411,15 @@ async function openMovieModal(movieId, cardEl) {
         }
 
         // Links
-        const trailerLink = document.getElementById('modal-trailer-link');
+        const trailerBtn = document.getElementById('modal-trailer-btn');
         const imdbLink = document.getElementById('modal-imdb-link');
         const tmdbLink = document.getElementById('modal-tmdb-link');
+        currentTrailerKey = m.trailer_key || null;
         if (m.trailer_key) {
-            trailerLink.href = `https://www.youtube.com/watch?v=${m.trailer_key}`;
-            trailerLink.classList.remove('hidden');
+            trailerBtn.classList.remove('hidden');
+            document.getElementById('modal-trailer-btn-text').textContent = 'Watch Trailer';
         } else {
-            trailerLink.classList.add('hidden');
+            trailerBtn.classList.add('hidden');
         }
         if (m.imdb_id) {
             imdbLink.href = `https://www.imdb.com/title/${m.imdb_id}/`;
@@ -518,7 +532,51 @@ async function moveToCollection() {
     }
 }
 
+function playTrailer() {
+    if (!currentTrailerKey) return;
+    const container = document.getElementById('modal-trailer-container');
+    const backdropImg = document.getElementById('modal-backdrop-img');
+    const noBackdrop = document.getElementById('modal-no-backdrop');
+    const wrap = document.getElementById('modal-trailer-iframe-wrap');
+    // Inject iframe (autoplay=1, allow fullscreen)
+    wrap.innerHTML = `<iframe
+        src="https://www.youtube-nocookie.com/embed/${currentTrailerKey}?autoplay=1&rel=0&modestbranding=1"
+        class="w-full h-full"
+        allow="autoplay; fullscreen; picture-in-picture"
+        allowfullscreen
+        frameborder="0"
+    ></iframe>`;
+    backdropImg.classList.add('hidden');
+    noBackdrop.classList.add('hidden');
+    container.classList.remove('hidden');
+    // Update button to "Close Trailer"
+    const btn = document.getElementById('modal-trailer-btn');
+    btn.onclick = closeTrailer;
+    document.getElementById('modal-trailer-btn-text').textContent = 'Close Trailer';
+}
+
+function closeTrailer() {
+    const container = document.getElementById('modal-trailer-container');
+    const wrap = document.getElementById('modal-trailer-iframe-wrap');
+    wrap.innerHTML = ''; // removes iframe, stops video
+    container.classList.add('hidden');
+    // Restore backdrop
+    const backdropImg = document.getElementById('modal-backdrop-img');
+    const noBackdrop = document.getElementById('modal-no-backdrop');
+    if (document.getElementById('modal-backdrop').src && document.getElementById('modal-backdrop').src !== window.location.href) {
+        backdropImg.classList.remove('hidden');
+    } else {
+        noBackdrop.classList.remove('hidden');
+    }
+    const btn = document.getElementById('modal-trailer-btn');
+    btn.onclick = playTrailer;
+    document.getElementById('modal-trailer-btn-text').textContent = 'Watch Trailer';
+}
+
 function closeMovieModal() {
+    // Stop any playing trailer
+    document.getElementById('modal-trailer-iframe-wrap').innerHTML = '';
+    document.getElementById('modal-trailer-container').classList.add('hidden');
     movieModal.classList.add('hidden');
     document.body.style.overflow = '';
 }

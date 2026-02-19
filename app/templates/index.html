@@ -103,8 +103,8 @@
 {% if collections %}
 <div class="flex flex-col gap-3">
     {% for c in collections %}
-    <a href="/collections/{{ c.id }}" class="collection-card group relative rounded-2xl block bg-surface-900 border border-white/[0.06]" style="aspect-ratio: 32/9; overflow: hidden;">
-        <!-- Poster mosaic — clipped separately so scale doesn't bleed outside card -->
+    <a href="/collections/{{ c.id }}" class="collection-card group relative rounded-2xl block bg-surface-900 border border-white/[0.06]" style="height: 80px; overflow: hidden;">
+        <!-- Poster mosaic — right half only on mobile, full width on desktop -->
         <div class="collection-poster-wrap absolute inset-0 flex overflow-hidden rounded-2xl">
             {% if c.poster_urls %}
                 {% for url in c.poster_urls %}
@@ -112,19 +112,19 @@
                 {% endfor %}
             {% else %}
             <div class="w-full flex items-center justify-center">
-                <span class="text-5xl opacity-10">🎬</span>
+                <span class="text-4xl opacity-10">🎬</span>
             </div>
             {% endif %}
         </div>
 
-        <!-- Gradient scrim -->
-        <div class="collection-scrim absolute inset-0" style="background: linear-gradient(to top, rgba(5,5,7,0.97) 0%, rgba(5,5,7,0.55) 45%, rgba(5,5,7,0.1) 75%, transparent 100%);"></div>
+        <!-- Strong left-to-right gradient ensuring text area is always dark -->
+        <div class="collection-scrim absolute inset-0" style="background: linear-gradient(to right, rgba(5,5,7,0.98) 0%, rgba(5,5,7,0.92) 40%, rgba(5,5,7,0.6) 65%, rgba(5,5,7,0.1) 100%);"></div>
 
-        <!-- Content overlay -->
-        <div class="absolute inset-0 flex flex-col justify-end px-4 pb-4">
+        <!-- Content: vertically centered, left-anchored -->
+        <div class="absolute inset-0 flex flex-col justify-center px-4">
             <!-- Badges row -->
-            <div class="flex items-center gap-1.5 mb-2">
-                <span class="inline-flex items-center rounded-full bg-white/10 backdrop-blur-sm px-2.5 py-0.5 text-[11px] font-semibold text-white/70 border border-white/[0.12]">
+            <div class="flex items-center gap-1.5 mb-1">
+                <span class="inline-flex items-center rounded-full bg-white/10 backdrop-blur-sm px-2 py-0.5 text-[10px] font-semibold text-white/70 border border-white/[0.12]">
                     {% if c.media_type == "show" %}{{ c.movie_count }} show{{ "s" if c.movie_count != 1 else "" }}
                     {% else %}{{ c.movie_count }} movie{{ "s" if c.movie_count != 1 else "" }}{% endif %}
                 </span>
@@ -138,18 +138,13 @@
                 </span>
                 {% endif %}
                 <!-- Delete button -->
-                <button onclick="deleteCollection(event, {{ c.id }}, this)" class="ml-auto p-1.5 rounded-full bg-black/30 backdrop-blur-sm text-white/40 hover:text-white hover:bg-rose-500/80 opacity-0 group-hover:opacity-100 transition-all duration-300" title="Delete collection">
+                <button onclick="deleteCollection(event, {{ c.id }}, this)" class="ml-auto mr-1 p-1.5 rounded-full bg-black/30 backdrop-blur-sm text-white/40 hover:text-white hover:bg-rose-500/80 opacity-0 group-hover:opacity-100 transition-all duration-300" title="Delete collection">
                     <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
                 </button>
             </div>
 
             <!-- Title -->
-            <h3 class="font-semibold text-white text-2xl leading-snug">{{ c.name }}</h3>
-
-            <!-- Description — hidden, slides up on hover -->
-            {% if c.description %}
-            <p class="collection-desc text-[12px] text-zinc-400 leading-relaxed line-clamp-2 mt-1">{{ c.description }}</p>
-            {% endif %}
+            <h3 class="font-semibold text-white text-base sm:text-xl leading-tight pr-12">{{ c.name }}</h3>
         </div>
     </a>
     {% endfor %}
