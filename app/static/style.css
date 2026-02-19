@@ -1,7 +1,59 @@
 /* Flickvault — Cinema-themed design system */
 
-/* === Font === */
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
+/* === Fonts === */
+@font-face {
+  font-family: 'ClashGrotesk';
+  src: url('/static/Fonts/WEB/fonts/ClashGrotesk-Extralight.woff2') format('woff2'),
+       url('/static/Fonts/WEB/fonts/ClashGrotesk-Extralight.woff') format('woff');
+  font-weight: 200;
+  font-display: swap;
+  font-style: normal;
+}
+@font-face {
+  font-family: 'ClashGrotesk';
+  src: url('/static/Fonts/WEB/fonts/ClashGrotesk-Light.woff2') format('woff2'),
+       url('/static/Fonts/WEB/fonts/ClashGrotesk-Light.woff') format('woff');
+  font-weight: 300;
+  font-display: swap;
+  font-style: normal;
+}
+@font-face {
+  font-family: 'ClashGrotesk';
+  src: url('/static/Fonts/WEB/fonts/ClashGrotesk-Regular.woff2') format('woff2'),
+       url('/static/Fonts/WEB/fonts/ClashGrotesk-Regular.woff') format('woff');
+  font-weight: 400;
+  font-display: swap;
+  font-style: normal;
+}
+@font-face {
+  font-family: 'ClashGrotesk';
+  src: url('/static/Fonts/WEB/fonts/ClashGrotesk-Medium.woff2') format('woff2'),
+       url('/static/Fonts/WEB/fonts/ClashGrotesk-Medium.woff') format('woff');
+  font-weight: 500;
+  font-display: swap;
+  font-style: normal;
+}
+@font-face {
+  font-family: 'ClashGrotesk';
+  src: url('/static/Fonts/WEB/fonts/ClashGrotesk-Semibold.woff2') format('woff2'),
+       url('/static/Fonts/WEB/fonts/ClashGrotesk-Semibold.woff') format('woff');
+  font-weight: 600;
+  font-display: swap;
+  font-style: normal;
+}
+@font-face {
+  font-family: 'ClashGrotesk';
+  src: url('/static/Fonts/WEB/fonts/ClashGrotesk-Bold.woff2') format('woff2'),
+       url('/static/Fonts/WEB/fonts/ClashGrotesk-Bold.woff') format('woff');
+  font-weight: 700;
+  font-display: swap;
+  font-style: normal;
+}
+
+/* === Apply ClashGrotesk globally === */
+html, body, * {
+    font-family: 'ClashGrotesk', system-ui, -apple-system, sans-serif !important;
+}
 
 /* === Card hover === */
 .card-glow {
@@ -11,6 +63,50 @@
 .card-glow:hover {
     transform: translateY(-2px);
     box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+}
+
+/* === Collection cards === */
+.collection-card {
+    transition: transform 0.35s cubic-bezier(0.25, 0.46, 0.45, 0.94),
+                box-shadow 0.35s cubic-bezier(0.25, 0.46, 0.45, 0.94),
+                border-color 0.35s ease;
+}
+
+.collection-card:hover {
+    transform: translateY(-4px) scale(1.01);
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(251, 191, 36, 0.15);
+    border-color: rgba(251, 191, 36, 0.2);
+}
+
+.collection-poster {
+    transition: transform 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94), opacity 0.4s ease;
+    opacity: 0.65;
+}
+
+.collection-card:hover .collection-poster {
+    transform: scale(1.06);
+    opacity: 0.85;
+}
+
+.collection-scrim {
+    transition: opacity 0.4s ease;
+}
+
+.collection-card:hover .collection-scrim {
+    opacity: 0.85;
+}
+
+.collection-desc {
+    max-height: 0;
+    overflow: hidden;
+    opacity: 0;
+    transition: max-height 0.35s cubic-bezier(0.25, 0.46, 0.45, 0.94),
+                opacity 0.3s ease 0.05s;
+}
+
+.collection-card:hover .collection-desc {
+    max-height: 3rem;
+    opacity: 1;
 }
 
 /* === Scrollbar === */
