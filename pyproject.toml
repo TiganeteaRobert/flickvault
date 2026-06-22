@@ -21,3 +21,8 @@ dependencies = [
 [project.scripts]
 flickvault-web = "app.main:run"
 flickvault-mcp = "mcp_server.server:main"
+
+[dependency-groups]
+dev = [
+    "pytest>=9.1.1",
+]

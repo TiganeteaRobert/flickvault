@@ -60,6 +60,7 @@ class MovieCreate(BaseModel):
     poster_url: str = ""
     rating: float | None = None
     media_type: str = "movie"
+    match_reason: str = ""
 
 
 class MovieOut(BaseModel):

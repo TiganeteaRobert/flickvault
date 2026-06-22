@@ -1,5 +1,5 @@
 from sqlalchemy import func
-from sqlalchemy.orm import Session, joinedload
+from sqlalchemy.orm import Session, aliased, joinedload
 
 from app.models import Collection, Movie, CollectionMovie
 from app.schemas import CollectionCreate, CollectionUpdate, MovieCreate
@@ -16,21 +16,30 @@ def create_collection(db: Session, data: CollectionCreate, user_id: int, parent_
 
 
 def get_collections(db: Session, user_id: int) -> list[dict]:
+    ParentCollection = aliased(Collection)
     rows = (
-        db.query(Collection, func.count(CollectionMovie.id).label("movie_count"))
-        .outerjoin(CollectionMovie)
+        db.query(
+            Collection,
+            ParentCollection.name.label("parent_name"),
+            func.count(CollectionMovie.id).label("movie_count"),
+        )
+        .select_from(Collection)
+        .outerjoin(CollectionMovie, CollectionMovie.collection_id == Collection.id)
+        .outerjoin(ParentCollection, Collection.parent_id == ParentCollection.id)
         .filter(Collection.user_id == user_id)
-        .group_by(Collection.id)
+        .group_by(Collection.id, ParentCollection.name)
         .order_by(Collection.created_at.desc())
         .all()
     )
     results = []
-    for collection, count in rows:
+    for collection, parent_name, count in rows:
         results.append({
             "id": collection.id,
             "name": collection.name,
             "description": collection.description,
             "media_type": collection.media_type,
+            "parent_id": collection.parent_id,
+            "parent_name": parent_name,
             "min_rating": collection.min_rating,
             "created_at": collection.created_at,
             "updated_at": collection.updated_at,
@@ -83,12 +92,13 @@ def get_collection_with_movies(db: Session, collection_id: int, user_id: int) ->
         .order_by(CollectionMovie.sort_order, CollectionMovie.added_at)
         .all()
     )
-    movies = [cm.movie for cm in cms]
+    movies = [_movie_with_collection_data(cm) for cm in cms]
     return {
         "id": collection.id,
         "name": collection.name,
         "description": collection.description,
         "media_type": collection.media_type,
+        "parent_id": collection.parent_id,
         "min_rating": collection.min_rating,
         "created_at": collection.created_at,
         "updated_at": collection.updated_at,
@@ -143,6 +153,24 @@ def get_ancestor_movie_titles(db: Session, collection_id: int, user_id: int) -> 
         current_id = collection.parent_id
 
     return titles
+
+
+def get_user_media_titles(db: Session, user_id: int, media_type: str) -> list[str]:
+    """Return distinct titles already saved by a user for the requested media type."""
+    rows = (
+        db.query(Movie.title)
+        .join(CollectionMovie)
+        .join(Collection)
+        .filter(
+            Collection.user_id == user_id,
+            Collection.media_type == media_type,
+            Movie.media_type == media_type,
+        )
+        .distinct()
+        .order_by(Movie.title)
+        .all()
+    )
+    return [title for (title,) in rows]
 
 
 # --- Movies ---
@@ -209,6 +237,10 @@ def add_movie_to_collection(db: Session, collection_id: int, data: MovieCreate, 
         .first()
     )
     if existing:
+        match_reason = data.match_reason.strip() if data.match_reason else ""
+        if match_reason and existing.match_reason != match_reason:
+            existing.match_reason = match_reason
+            db.commit()
         return {"movie": movie, "added": False}
 
     max_order = (
@@ -220,10 +252,30 @@ def add_movie_to_collection(db: Session, collection_id: int, data: MovieCreate, 
         collection_id=collection_id,
         movie_id=movie.id,
         sort_order=max_order + 1,
+        match_reason=data.match_reason.strip() if data.match_reason else "",
     )
     db.add(cm)
     db.commit()
     return {"movie": movie, "added": True}
+
+
+def _movie_with_collection_data(cm: CollectionMovie) -> dict:
+    movie = cm.movie
+    return {
+        "id": movie.id,
+        "title": movie.title,
+        "year": movie.year,
+        "trakt_id": movie.trakt_id,
+        "imdb_id": movie.imdb_id,
+        "tmdb_id": movie.tmdb_id,
+        "overview": movie.overview,
+        "poster_url": movie.poster_url,
+        "rating": movie.rating,
+        "media_type": movie.media_type,
+        "created_at": movie.created_at,
+        "match_reason": cm.match_reason or "",
+        "sort_order": cm.sort_order,
+    }
 
 
 def add_movies_batch(db: Session, collection_id: int, movies_data: list[MovieCreate], user_id: int) -> dict:

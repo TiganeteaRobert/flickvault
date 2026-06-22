@@ -6,6 +6,7 @@ from collections.abc import Generator
 import anthropic
 
 from app.config import ANTHROPIC_API_KEY
+from app.recommendation_preferences import RecommendationPreferences, build_generation_user_message
 from app.tmdb import search_media
 
 
@@ -27,7 +28,7 @@ Return a JSON object with exactly this structure:
   "name": "Collection Name",
   "description": "A brief description of the collection",
   "{key}": [
-    {{"title": "{item_label.title()} Title", "year": 1999}},
+    {{"title": "{item_label.title()} Title", "year": 1999, "reason": "One concise sentence explaining why this fits"}},
     ...
   ]
 }}
@@ -35,8 +36,9 @@ Return a JSON object with exactly this structure:
 Rules:
 - Return ONLY valid JSON, no markdown fences, no extra text
 - The "{key}" array must contain exactly the number of {item_label}s requested
-- Each {item_label} must have "title" (string) and "year" (integer)
-- Only include real, well-known {item_label}s that match the user's request
+- Each {item_label} must have "title" (string), "year" (integer), and "reason" (string)
+- Only include real {item_label}s that match the user's request
+- Calibrate title familiarity to the requested obscurity level
 - Order {item_label}s by relevance to the prompt{rating_rule}"""
 
 
@@ -48,6 +50,7 @@ def generate_collection_iter(
     media_type: str = "movie",
     min_rating: float | None = None,
     exclude_titles: list[str] | None = None,
+    preferences: RecommendationPreferences | None = None,
 ) -> Generator[dict, None, None]:
     """Generator that yields progress events and a final result.
 
@@ -78,7 +81,12 @@ def generate_collection_iter(
 
         # Ask for extra on each round to compensate for filtering
         request_count = still_needed + 5 if min_rating is not None else still_needed
-        user_message = f"{prompt}\n\nPlease return exactly {request_count} {item_label}."
+        user_message = build_generation_user_message(
+            prompt,
+            request_count,
+            media_type,
+            preferences=preferences,
+        )
 
         if all_exclude:
             titles_list = ", ".join(f'"{t}"' for t in all_exclude)
@@ -115,8 +123,16 @@ def generate_collection_iter(
         for item in items:
             title = item.get("title", "")
             year = item.get("year")
+            reason = item.get("reason") or item.get("match_reason") or ""
 
-            movie_data = {"title": title, "year": year, "overview": "", "poster_url": "", "media_type": media_type}
+            movie_data = {
+                "title": title,
+                "year": year,
+                "overview": "",
+                "poster_url": "",
+                "media_type": media_type,
+                "match_reason": reason,
+            }
 
             tmdb_result = search_media(title, year, media_type=media_type, api_key=tmdb_key)
             if tmdb_result:
@@ -158,11 +174,13 @@ def generate_collection(
     media_type: str = "movie",
     min_rating: float | None = None,
     exclude_titles: list[str] | None = None,
+    preferences: RecommendationPreferences | None = None,
 ) -> dict:
     """Non-streaming wrapper. Returns the final result dict."""
     for event in generate_collection_iter(
         prompt, movie_count, anthropic_key=anthropic_key, tmdb_key=tmdb_key,
         media_type=media_type, min_rating=min_rating, exclude_titles=exclude_titles,
+        preferences=preferences,
     ):
         if event["type"] == "result":
             return {"name": event["name"], "description": event["description"], "movies": event["movies"]}

@@ -71,6 +71,7 @@ class CollectionMovie(Base):
     movie_id = Column(Integer, ForeignKey("movies.id"), nullable=False)
     added_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
     sort_order = Column(Integer, default=0)
+    match_reason = Column(Text, default="")
 
     collection = relationship("Collection", back_populates="collection_movies")
     movie = relationship("Movie", back_populates="collection_movies")

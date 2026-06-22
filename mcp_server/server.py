@@ -13,6 +13,7 @@ if str(PROJECT_ROOT) not in sys.path:
 
 from app.database import SessionLocal, init_db
 from app.schemas import CollectionCreate, CollectionUpdate, MovieCreate
+from app.recommendation_preferences import RecommendationPreferences
 from app import crud
 from app.ai_generate import generate_collection as ai_generate_collection
 
@@ -164,12 +165,13 @@ def list_movies_in_collection(user_id: int, collection_id: int) -> str:
             return json.dumps({"error": "Collection not found"})
         movies = [
             {
-                "id": m.id,
-                "title": m.title,
-                "year": m.year,
-                "trakt_id": m.trakt_id,
-                "imdb_id": m.imdb_id,
-                "media_type": m.media_type,
+                "id": m["id"],
+                "title": m["title"],
+                "year": m["year"],
+                "trakt_id": m["trakt_id"],
+                "imdb_id": m["imdb_id"],
+                "media_type": m["media_type"],
+                "match_reason": m["match_reason"],
             }
             for m in data["movies"]
         ]
@@ -285,7 +287,26 @@ def import_from_json_file(user_id: int, collection_id: int, file_path: str) -> s
 # --- Tool 10: generate_collection ---
 
 @mcp.tool()
-def generate_collection(user_id: int, prompt: str, movie_count: int = 10, media_type: str = "movie", min_rating: float | None = None, source_collection_id: int | None = None) -> str:
+def generate_collection(
+    user_id: int,
+    prompt: str,
+    movie_count: int = 10,
+    media_type: str = "movie",
+    min_rating: float | None = None,
+    source_collection_id: int | None = None,
+    obscurity_level: int = 3,
+    seed_title: str | None = None,
+    seed_year: int | None = None,
+    genres_csv: str = "",
+    tone: str | None = None,
+    era: str | None = None,
+    runtime: str | None = None,
+    pace: str | None = None,
+    ending_vibe: str | None = None,
+    language_scope: str | None = None,
+    watch_context: str | None = None,
+    exclude_seen: bool = True,
+) -> str:
     """Generate a collection using AI. Describe the collection you want in natural language
     and Claude will create it with matching movies or TV shows, enriched with TMDB poster and plot data.
 
@@ -296,6 +317,18 @@ def generate_collection(user_id: int, prompt: str, movie_count: int = 10, media_
         media_type: Type of media — "movie" or "show" (default "movie")
         min_rating: Minimum TMDB rating to include (e.g. 7.0). Items below this are filtered out.
         source_collection_id: ID of the source collection for "More like this" lineage. Movies from this collection and its ancestors will be excluded.
+        obscurity_level: 1 for obscure festival/indie discoveries through 5 for blockbuster/mainstream picks.
+        seed_title: Optional movie/show title to use as the "because I watched..." seed.
+        seed_year: Optional release year for seed_title.
+        genres_csv: Optional comma-separated genre/style filters.
+        tone: Optional tone, e.g. "melancholy", "funny", "tense".
+        era: Optional era key: pre_1980, 1980s, 1990s, 2000s, 2010s, 2020s, modern.
+        runtime: Optional runtime key: under_100, standard, long.
+        pace: Optional pace key: slow_burn, balanced, propulsive.
+        ending_vibe: Optional ending key: uplifting, bittersweet, bleak, ambiguous, twisty.
+        language_scope: Optional language key: english, non_english, global.
+        watch_context: Optional context key: solo, date_night, group, family, late_night.
+        exclude_seen: Exclude titles already saved in the user's vault.
     """
     db = _get_db()
     try:
@@ -309,7 +342,31 @@ def generate_collection(user_id: int, prompt: str, movie_count: int = 10, media_
                 source = crud.get_collection(db, source_collection_id, user_id)
                 if source and source.min_rating is not None:
                     effective_min_rating = source.min_rating
-        result = ai_generate_collection(prompt, movie_count, media_type=media_type, min_rating=effective_min_rating, exclude_titles=exclude_titles or None)
+        if exclude_seen:
+            exclude_titles.extend(crud.get_user_media_titles(db, user_id, media_type))
+        exclude_titles = list(dict.fromkeys(exclude_titles))
+        preferences = RecommendationPreferences(
+            obscurity_level=obscurity_level,
+            seed_title=seed_title,
+            seed_year=seed_year,
+            genres=[g.strip() for g in genres_csv.split(",") if g.strip()],
+            tone=tone,
+            era=era,
+            runtime=runtime,
+            pace=pace,
+            ending_vibe=ending_vibe,
+            language_scope=language_scope,
+            watch_context=watch_context,
+            exclude_seen=exclude_seen,
+        )
+        result = ai_generate_collection(
+            prompt,
+            movie_count,
+            media_type=media_type,
+            min_rating=effective_min_rating,
+            exclude_titles=exclude_titles or None,
+            preferences=preferences,
+        )
         collection = crud.create_collection(
             db, CollectionCreate(name=result["name"], description=result["description"], media_type=media_type), user_id,
             parent_id=parent_id,
@@ -359,6 +416,9 @@ def _normalize(items: list) -> list[dict]:
                 movie[field] = str(item[field])
         if "rating" in item and item["rating"] is not None:
             movie["rating"] = float(item["rating"])
+        reason = item.get("match_reason") or item.get("reason")
+        if reason:
+            movie["match_reason"] = str(reason)
         results.append(movie)
     return results
 

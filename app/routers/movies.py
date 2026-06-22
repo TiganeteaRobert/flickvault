@@ -143,5 +143,8 @@ def _normalize_movie_list(items: list) -> list[dict]:
                 movie[field] = str(item[field])
         if "rating" in item and item["rating"] is not None:
             movie["rating"] = float(item["rating"])
+        reason = item.get("match_reason") or item.get("reason")
+        if reason:
+            movie["match_reason"] = str(reason)
         results.append(movie)
     return results

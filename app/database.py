@@ -57,6 +57,14 @@ def _run_migrations():
                 "ALTER TABLE collections ADD COLUMN min_rating FLOAT"
             ))
 
+        collection_movie_cols = [
+            row[1] for row in conn.execute(text("PRAGMA table_info(collection_movies)")).fetchall()
+        ]
+        if "match_reason" not in collection_movie_cols:
+            conn.execute(text(
+                "ALTER TABLE collection_movies ADD COLUMN match_reason TEXT DEFAULT ''"
+            ))
+
         conn.commit()
 
 
