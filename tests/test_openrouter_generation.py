@@ -52,7 +52,32 @@ def test_generate_collection_calls_openrouter_with_configured_model(monkeypatch)
     assert calls[0]["json"]["model"] == "z-ai/glm-5.2"
     assert calls[0]["json"]["messages"][0]["role"] == "system"
     assert calls[0]["json"]["messages"][1]["role"] == "user"
-    assert calls[0]["json"]["max_tokens"] == 2048
+    assert calls[0]["json"]["max_tokens"] == 8192
+    assert calls[0]["json"]["response_format"] == {"type": "json_object"}
+    assert calls[0]["json"]["plugins"] == [{"id": "response-healing"}]
+
+
+def test_openrouter_truncated_response_has_clear_error(monkeypatch):
+    def fake_post(url, headers, json, timeout):
+        return DummyResponse({
+            "choices": [
+                {
+                    "finish_reason": "length",
+                    "message": {
+                        "content": "{\"name\":\"Too Short\",\"movies\":[{\"title\":\"Broken\",\"reason\":\"cut"
+                    },
+                }
+            ]
+        })
+
+    monkeypatch.setattr(ai_generate.httpx, "post", fake_post)
+
+    try:
+        ai_generate.generate_collection("anything", movie_count=1, openrouter_key="test-openrouter-key")
+    except ValueError as exc:
+        assert "truncated before valid JSON completed" in str(exc)
+    else:
+        raise AssertionError("Expected truncated OpenRouter response to raise ValueError")
 
 
 def test_generate_collection_requires_openrouter_key():

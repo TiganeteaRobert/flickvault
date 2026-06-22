@@ -17,6 +17,7 @@ from app.tmdb import search_media
 
 
 OPENROUTER_CHAT_COMPLETIONS_URL = f"{OPENROUTER_BASE_URL.rstrip('/')}/chat/completions"
+OPENROUTER_MAX_TOKENS = 8192
 
 
 def _system_prompt(media_type: str, min_rating: float | None = None) -> str:
@@ -201,7 +202,9 @@ def _call_openrouter(system: str, user_message: str, openrouter_key: str) -> str
             {"role": "system", "content": system},
             {"role": "user", "content": user_message},
         ],
-        "max_tokens": 2048,
+        "max_tokens": OPENROUTER_MAX_TOKENS,
+        "response_format": {"type": "json_object"},
+        "plugins": [{"id": "response-healing"}],
     }
 
     try:
@@ -219,7 +222,10 @@ def _call_openrouter(system: str, user_message: str, openrouter_key: str) -> str
         raise ValueError(f"OpenRouter returned invalid response JSON: {e}") from e
 
     try:
-        content = data["choices"][0]["message"]["content"]
+        choice = data["choices"][0]
+        if choice.get("finish_reason") == "length":
+            raise ValueError("OpenRouter response was truncated before valid JSON completed")
+        content = choice["message"]["content"]
     except (KeyError, IndexError, TypeError) as e:
         raise ValueError("OpenRouter response missing message content") from e
 
