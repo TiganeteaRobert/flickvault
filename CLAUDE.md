@@ -75,7 +75,7 @@ Key behaviors:
 - `get_collections()` fetches up to 4 poster URLs per collection in a single extra query for the grid UI
 
 ### AI Generation (`app/ai_generate.py`)
-- Uses `anthropic` SDK (model: `claude-sonnet-4-5-20250929`) to generate movie/show lists from a natural language prompt
+- Uses OpenRouter's chat completions API (default model: `z-ai/glm-5.2`) to generate movie/show lists from a natural language prompt
 - Calls TMDB API (`app/tmdb.py`) to enrich each result with `tmdb_id`, `imdb_id`, `poster_url`, `overview`, `rating`
 - `generate_collection_iter()` is a generator yielding `{"type": "progress"}` and `{"type": "result"}` events
 - When `min_rating` is set, runs up to 5 rounds to gather enough titles that pass the rating filter
@@ -95,7 +95,11 @@ Key behaviors:
 | Env Var | Default | Purpose |
 |---|---|---|
 | `DATABASE_PATH` | `data/flickvault.db` | SQLite file path |
-| `ANTHROPIC_API_KEY` | `""` | Required for AI generation |
+| `OPENROUTER_API_KEY` | `""` | Required for AI generation |
+| `OPENROUTER_MODEL` | `"z-ai/glm-5.2"` | OpenRouter model slug |
+| `OPENROUTER_BASE_URL` | `"https://openrouter.ai/api/v1"` | OpenRouter API base URL |
+| `OPENROUTER_SITE_URL` | `"https://flickvault.fly.dev"` | Optional OpenRouter attribution URL |
+| `OPENROUTER_APP_TITLE` | `"Flickvault"` | Optional OpenRouter attribution title |
 | `TMDB_API_KEY` | `""` | Required for movie enrichment |
 | `JWT_SECRET` | `"change-me-in-production-please!!"` | JWT signing key |
 | `JWT_EXPIRATION_HOURS` | `720` (30 days) | Token lifetime |

@@ -5,7 +5,7 @@ from dataclasses import dataclass
 from fastapi import Request, Depends, HTTPException
 from sqlalchemy.orm import Session
 
-from app.config import ANTHROPIC_API_KEY, TMDB_API_KEY
+from app.config import OPENROUTER_API_KEY, TMDB_API_KEY
 from app.database import get_db
 from app.auth import decode_token, get_user_by_id
 from app.models import User
@@ -13,14 +13,14 @@ from app.models import User
 
 @dataclass
 class APIKeys:
-    anthropic_key: str
+    openrouter_key: str
     tmdb_key: str
 
 
 def get_api_keys() -> APIKeys:
     """Return API keys from server environment variables."""
     return APIKeys(
-        anthropic_key=ANTHROPIC_API_KEY,
+        openrouter_key=OPENROUTER_API_KEY,
         tmdb_key=TMDB_API_KEY,
     )
 

@@ -76,7 +76,7 @@ def generate(data: GenerateRequest, db: Session = Depends(get_db), keys: APIKeys
             for event in generate_collection_iter(
                 data.prompt,
                 data.movie_count,
-                anthropic_key=keys.anthropic_key,
+                openrouter_key=keys.openrouter_key,
                 tmdb_key=keys.tmdb_key,
                 media_type=data.media_type,
                 min_rating=min_rating,

@@ -1,13 +1,22 @@
-"""AI-powered collection generation using Claude + TMDB enrichment."""
+"""AI-powered collection generation using OpenRouter + TMDB enrichment."""
 
 import json
 from collections.abc import Generator
 
-import anthropic
+import httpx
 
-from app.config import ANTHROPIC_API_KEY
+from app.config import (
+    OPENROUTER_API_KEY,
+    OPENROUTER_APP_TITLE,
+    OPENROUTER_BASE_URL,
+    OPENROUTER_MODEL,
+    OPENROUTER_SITE_URL,
+)
 from app.recommendation_preferences import RecommendationPreferences, build_generation_user_message
 from app.tmdb import search_media
+
+
+OPENROUTER_CHAT_COMPLETIONS_URL = f"{OPENROUTER_BASE_URL.rstrip('/')}/chat/completions"
 
 
 def _system_prompt(media_type: str, min_rating: float | None = None) -> str:
@@ -45,7 +54,7 @@ Rules:
 def generate_collection_iter(
     prompt: str,
     movie_count: int = 10,
-    anthropic_key: str | None = None,
+    openrouter_key: str | None = None,
     tmdb_key: str | None = None,
     media_type: str = "movie",
     min_rating: float | None = None,
@@ -58,14 +67,13 @@ def generate_collection_iter(
         {"type": "progress", "found": int, "needed": int} — after each round if more are needed
         {"type": "result", "name": str, "description": str, "movies": list} — final result
     """
-    ak = anthropic_key or ANTHROPIC_API_KEY
-    if not ak:
-        raise ValueError("ANTHROPIC_API_KEY is not set")
+    ok = openrouter_key or OPENROUTER_API_KEY
+    if not ok:
+        raise ValueError("OPENROUTER_API_KEY is not set")
 
     item_label = "TV shows" if media_type == "show" else "movies"
     items_key = "shows" if media_type == "show" else "movies"
 
-    client = anthropic.Anthropic(api_key=ak)
     system = _system_prompt(media_type, min_rating)
 
     all_exclude = set(exclude_titles or [])
@@ -92,14 +100,7 @@ def generate_collection_iter(
             titles_list = ", ".join(f'"{t}"' for t in all_exclude)
             user_message += f"\n\nIMPORTANT: Do NOT include any of these titles (they are already in related collections or previous results): {titles_list}"
 
-        response = client.messages.create(
-            model="claude-sonnet-4-5-20250929",
-            max_tokens=2048,
-            system=system,
-            messages=[{"role": "user", "content": user_message}],
-        )
-
-        raw_text = response.content[0].text.strip()
+        raw_text = _call_openrouter(system, user_message, ok).strip()
         if raw_text.startswith("```"):
             raw_text = raw_text.split("\n", 1)[1]
             if raw_text.endswith("```"):
@@ -108,10 +109,10 @@ def generate_collection_iter(
         try:
             data = json.loads(raw_text)
         except json.JSONDecodeError as e:
-            raise ValueError(f"Claude returned invalid JSON: {e}")
+            raise ValueError(f"OpenRouter returned invalid JSON: {e}")
 
         if "name" not in data or (items_key not in data and "movies" not in data):
-            raise ValueError(f"Claude response missing required fields (name, {items_key})")
+            raise ValueError(f"OpenRouter response missing required fields (name, {items_key})")
 
         # Keep name/description from the first round
         if round_num == 0:
@@ -169,7 +170,7 @@ def generate_collection_iter(
 def generate_collection(
     prompt: str,
     movie_count: int = 10,
-    anthropic_key: str | None = None,
+    openrouter_key: str | None = None,
     tmdb_key: str | None = None,
     media_type: str = "movie",
     min_rating: float | None = None,
@@ -178,10 +179,50 @@ def generate_collection(
 ) -> dict:
     """Non-streaming wrapper. Returns the final result dict."""
     for event in generate_collection_iter(
-        prompt, movie_count, anthropic_key=anthropic_key, tmdb_key=tmdb_key,
+        prompt, movie_count, openrouter_key=openrouter_key, tmdb_key=tmdb_key,
         media_type=media_type, min_rating=min_rating, exclude_titles=exclude_titles,
         preferences=preferences,
     ):
         if event["type"] == "result":
             return {"name": event["name"], "description": event["description"], "movies": event["movies"]}
     raise ValueError("Generation produced no result")
+
+
+def _call_openrouter(system: str, user_message: str, openrouter_key: str) -> str:
+    headers = {
+        "Authorization": f"Bearer {openrouter_key}",
+        "Content-Type": "application/json",
+        "HTTP-Referer": OPENROUTER_SITE_URL,
+        "X-OpenRouter-Title": OPENROUTER_APP_TITLE,
+    }
+    payload = {
+        "model": OPENROUTER_MODEL,
+        "messages": [
+            {"role": "system", "content": system},
+            {"role": "user", "content": user_message},
+        ],
+        "max_tokens": 2048,
+    }
+
+    try:
+        response = httpx.post(
+            OPENROUTER_CHAT_COMPLETIONS_URL,
+            headers=headers,
+            json=payload,
+            timeout=60,
+        )
+        response.raise_for_status()
+        data = response.json()
+    except httpx.HTTPError as e:
+        raise ValueError(f"OpenRouter request failed: {e}") from e
+    except json.JSONDecodeError as e:
+        raise ValueError(f"OpenRouter returned invalid response JSON: {e}") from e
+
+    try:
+        content = data["choices"][0]["message"]["content"]
+    except (KeyError, IndexError, TypeError) as e:
+        raise ValueError("OpenRouter response missing message content") from e
+
+    if isinstance(content, list):
+        return "".join(part.get("text", "") if isinstance(part, dict) else str(part) for part in content)
+    return str(content)

@@ -308,7 +308,7 @@ def generate_collection(
     exclude_seen: bool = True,
 ) -> str:
     """Generate a collection using AI. Describe the collection you want in natural language
-    and Claude will create it with matching movies or TV shows, enriched with TMDB poster and plot data.
+    and OpenRouter will create it with matching movies or TV shows, enriched with TMDB poster and plot data.
 
     Args:
         user_id: ID of the authenticated user who will own the new collection
