@@ -123,6 +123,18 @@ html, body, * {
     color: #fde68a;
 }
 
+.watch-mode-btn.is-active {
+    background: rgba(245, 158, 11, 0.18);
+    border-color: rgba(251, 191, 36, 0.48);
+    color: #fde68a;
+}
+
+.shortlist-btn.is-selected {
+    background: rgba(245, 158, 11, 0.28);
+    color: #fef3c7;
+    box-shadow: 0 0 0 1px rgba(251, 191, 36, 0.35);
+}
+
 /* === Scrollbar === */
 ::-webkit-scrollbar {
     width: 8px;

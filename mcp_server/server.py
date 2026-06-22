@@ -16,6 +16,7 @@ from app.schemas import CollectionCreate, CollectionUpdate, MovieCreate
 from app.recommendation_preferences import RecommendationPreferences
 from app import crud
 from app.ai_generate import generate_collection as ai_generate_collection
+from app.watch_decider import WATCH_MODES, rank_watch_picks
 
 mcp = FastMCP("flickvault")
 
@@ -384,6 +385,47 @@ def generate_collection(
         return json.dumps({"error": str(e)})
     except Exception as e:
         return json.dumps({"error": str(e)})
+    finally:
+        db.close()
+
+
+# --- Tool 11: decide_next_watch ---
+
+@mcp.tool()
+def decide_next_watch(
+    user_id: int,
+    collection_id: int,
+    mode: str = "sure_thing",
+    limit: int = 3,
+) -> str:
+    """Rank the best next watches in a collection with concise decision reasons.
+
+    Args:
+        user_id: ID of the authenticated user who owns the collection
+        collection_id: ID of the collection to rank
+        mode: Decision mode: sure_thing, hidden_gem, newer, classic, high_energy, mind_bender, date_night, wild_card
+        limit: Number of picks to return, from 1 to 10
+    """
+    db = _get_db()
+    try:
+        data = crud.get_collection_with_movies(db, collection_id, user_id)
+        if not data:
+            return json.dumps({"error": "Collection not found"})
+        clean_mode = mode if mode in WATCH_MODES else "sure_thing"
+        picks = rank_watch_picks(
+            data["movies"],
+            mode=clean_mode,
+            limit=limit,
+            collection_id=collection_id,
+        )
+        return json.dumps({
+            "collection_id": data["id"],
+            "collection_name": data["name"],
+            "mode": clean_mode,
+            "mode_label": WATCH_MODES[clean_mode],
+            "stats": data["stats"],
+            "picks": picks,
+        })
     finally:
         db.close()
 

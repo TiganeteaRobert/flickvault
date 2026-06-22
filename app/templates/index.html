@@ -247,6 +247,16 @@
                     {{ "%.1f"|format(c.min_rating) }}+
                 </span>
                 {% endif %}
+                {% if c.average_rating %}
+                <span class="inline-flex items-center rounded-full bg-emerald-500/20 backdrop-blur-sm px-2 py-0.5 text-[10px] font-bold text-emerald-200 border border-emerald-400/25">
+                    Avg {{ "%.1f"|format(c.average_rating) }}
+                </span>
+                {% endif %}
+                {% if c.year_span %}
+                <span class="hidden md:inline-flex items-center rounded-full bg-sky-500/20 backdrop-blur-sm px-2 py-0.5 text-[10px] font-bold text-sky-200 border border-sky-400/25">
+                    {{ c.year_span }}
+                </span>
+                {% endif %}
                 {% if c.parent_name %}
                 <span class="hidden sm:inline-flex items-center rounded-full bg-white/10 backdrop-blur-sm px-2 py-0.5 text-[10px] font-semibold text-white/60 border border-white/[0.12]">
                     from {{ c.parent_name }}

@@ -80,3 +80,31 @@ def test_get_collections_includes_parent_lineage_hint(db):
 
     assert child_row["parent_id"] == root.id
     assert child_row["parent_name"] == "Like Heat"
+
+
+def test_collection_payloads_include_watch_decision_stats(db):
+    user = create_user(db)
+    collection = crud.create_collection(db, CollectionCreate(name="Weekend", media_type="movie"), user.id)
+
+    crud.add_movie_to_collection(
+        db,
+        collection.id,
+        MovieCreate(title="Older Great", year=1979, rating=8.2, media_type="movie", match_reason="A confident classic pick."),
+        user.id,
+    )
+    crud.add_movie_to_collection(
+        db,
+        collection.id,
+        MovieCreate(title="New Solid", year=2021, rating=7.1, media_type="movie", match_reason="A precise modern fit."),
+        user.id,
+    )
+
+    detail = crud.get_collection_with_movies(db, collection.id, user.id)
+    summary = crud.get_collections(db, user.id)[0]
+
+    assert detail["stats"]["average_rating"] == 7.7
+    assert detail["stats"]["year_span"] == "1979-2021"
+    assert detail["stats"]["explained_count"] == 2
+    assert summary["average_rating"] == 7.7
+    assert summary["highest_rating"] == 8.2
+    assert summary["year_span"] == "1979-2021"

@@ -6,6 +6,7 @@ from app.schemas import CollectionCreate, CollectionUpdate, CollectionOut
 from app.dependencies import get_current_user
 from app.models import User
 from app import crud
+from app.watch_decider import WATCH_MODES, rank_watch_picks
 
 router = APIRouter(prefix="/api/collections", tags=["collections"])
 
@@ -31,6 +32,39 @@ def get_collection(collection_id: int, db: Session = Depends(get_db), user: User
     if not result:
         raise HTTPException(status_code=404, detail="Collection not found")
     return result
+
+
+@router.get("/{collection_id}/picks")
+def get_collection_picks(
+    collection_id: int,
+    mode: str = "sure_thing",
+    limit: int = 3,
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    result = crud.get_collection_with_movies(db, collection_id, user.id)
+    if not result:
+        raise HTTPException(status_code=404, detail="Collection not found")
+
+    clean_mode = mode if mode in WATCH_MODES else "sure_thing"
+    picks = rank_watch_picks(
+        result["movies"],
+        mode=clean_mode,
+        limit=limit,
+        collection_id=collection_id,
+    )
+    return {
+        "collection": {
+            "id": result["id"],
+            "name": result["name"],
+            "media_type": result["media_type"],
+            "movie_count": result["movie_count"],
+        },
+        "mode": clean_mode,
+        "mode_label": WATCH_MODES[clean_mode],
+        "stats": result["stats"],
+        "picks": picks,
+    }
 
 
 @router.put("/{collection_id}", response_model=CollectionOut)

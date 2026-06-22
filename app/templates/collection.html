@@ -22,6 +22,16 @@
                 {{ collection.movie_count }} movie{{ "s" if collection.movie_count != 1 else "" }}
                 {% endif %}
             </span>
+            {% if collection.stats.average_rating %}
+            <span class="inline-flex items-center rounded-full bg-emerald-500/10 border border-emerald-500/20 px-3.5 py-1 text-sm font-bold text-emerald-300">
+                Avg {{ "%.1f"|format(collection.stats.average_rating) }}
+            </span>
+            {% endif %}
+            {% if collection.stats.year_span %}
+            <span class="hidden sm:inline-flex items-center rounded-full bg-sky-500/10 border border-sky-500/20 px-3.5 py-1 text-sm font-bold text-sky-300">
+                {{ collection.stats.year_span }}
+            </span>
+            {% endif %}
             {% if collection.min_rating %}
             <span class="inline-flex items-center gap-1 rounded-full bg-brand-500/10 border border-brand-500/20 px-3.5 py-1 text-sm font-bold text-brand-400">
                 <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/></svg>
@@ -54,20 +64,48 @@
         <option value="year_asc">Oldest first</option>
         <option value="title_asc">Title A-Z</option>
     </select>
-    <button id="pick-tonight-btn" class="rounded-xl px-4 py-2.5 bg-brand-500 text-surface-950 text-sm font-bold hover:bg-brand-400 transition-colors btn-press">Pick Tonight</button>
+    <div id="watch-mode-tabs" class="flex flex-wrap gap-1.5">
+        <button type="button" data-mode="sure_thing" class="watch-mode-btn is-active rounded-xl px-3 py-2 text-xs font-bold border border-white/[0.08] bg-white/[0.06] text-zinc-300 hover:text-white transition-all">Safe</button>
+        <button type="button" data-mode="hidden_gem" class="watch-mode-btn rounded-xl px-3 py-2 text-xs font-bold border border-white/[0.08] bg-white/[0.04] text-zinc-400 hover:text-white transition-all">Gem</button>
+        <button type="button" data-mode="newer" class="watch-mode-btn rounded-xl px-3 py-2 text-xs font-bold border border-white/[0.08] bg-white/[0.04] text-zinc-400 hover:text-white transition-all">New</button>
+        <button type="button" data-mode="classic" class="watch-mode-btn rounded-xl px-3 py-2 text-xs font-bold border border-white/[0.08] bg-white/[0.04] text-zinc-400 hover:text-white transition-all">Classic</button>
+        <button type="button" data-mode="high_energy" class="watch-mode-btn rounded-xl px-3 py-2 text-xs font-bold border border-white/[0.08] bg-white/[0.04] text-zinc-400 hover:text-white transition-all">Energy</button>
+        <button type="button" data-mode="mind_bender" class="watch-mode-btn rounded-xl px-3 py-2 text-xs font-bold border border-white/[0.08] bg-white/[0.04] text-zinc-400 hover:text-white transition-all">Puzzle</button>
+        <button type="button" data-mode="date_night" class="watch-mode-btn rounded-xl px-3 py-2 text-xs font-bold border border-white/[0.08] bg-white/[0.04] text-zinc-400 hover:text-white transition-all">Date</button>
+        <button type="button" data-mode="wild_card" class="watch-mode-btn rounded-xl px-3 py-2 text-xs font-bold border border-white/[0.08] bg-white/[0.04] text-zinc-400 hover:text-white transition-all">Wild</button>
+    </div>
+    <button id="pick-tonight-btn" class="rounded-xl px-4 py-2.5 bg-brand-500 text-surface-950 text-sm font-bold hover:bg-brand-400 transition-colors btn-press">Decide</button>
     <span id="movie-visible-count" class="text-sm font-medium text-zinc-500 lg:w-24 lg:text-right">{{ collection.movie_count }} visible</span>
 </div>
-<p id="pick-tonight-status" class="hidden mb-4 rounded-xl bg-brand-500/10 border border-brand-500/20 px-4 py-3 text-sm text-brand-200"></p>
+
+<div id="decision-panel" class="hidden mb-4 rounded-2xl bg-white/[0.04] border border-white/[0.08] p-4">
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-3">
+        <div>
+            <p id="decision-title" class="text-sm font-bold text-zinc-100">Tonight's pick</p>
+            <p id="decision-summary" class="text-xs text-zinc-500 mt-0.5"></p>
+        </div>
+        <button type="button" id="decision-close" class="self-start sm:self-auto text-xs font-bold text-zinc-500 hover:text-zinc-200 transition-colors">Close</button>
+    </div>
+    <div id="decision-picks" class="grid grid-cols-1 md:grid-cols-3 gap-3"></div>
+</div>
 
 <div id="movie-grid" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
     {% for movie in collection.movies %}
     <div class="movie-card group relative rounded-xl overflow-hidden card-glow bg-surface-900 cursor-pointer"
+         data-movie-id="{{ movie.id }}"
          data-title="{{ movie.title|lower }}"
+         data-display-title="{{ movie.title }}"
          data-year="{{ movie.year or 0 }}"
          data-rating="{{ movie.rating or 0 }}"
          data-index="{{ loop.index0 }}"
          data-reason="{{ movie.match_reason }}"
+         data-poster="{{ movie.poster_url }}"
+         data-overview="{{ movie.overview }}"
          onclick="openMovieModal({{ movie.id }}, this)">
+        <button type="button" class="shortlist-btn absolute top-2 right-2 z-20 rounded-full bg-black/50 backdrop-blur-sm p-2 text-white/60 hover:text-brand-300 hover:bg-black/70 transition-all"
+                data-movie-id="{{ movie.id }}" onclick="toggleShortlist(event, {{ movie.id }}, this)" title="Shortlist">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.4" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-4-7 4V5z"/></svg>
+        </button>
         <!-- Poster -->
         {% if movie.poster_url %}
         <div class="aspect-[2/3] bg-surface-850 overflow-hidden">
@@ -230,6 +268,38 @@
     </div>
 </div>
 
+<!-- Shortlist Compare Drawer -->
+<div id="compare-drawer" class="hidden fixed left-4 right-4 bottom-4 z-[60] rounded-2xl bg-surface-900/95 backdrop-blur-xl border border-white/[0.1] shadow-2xl shadow-black/40 p-3">
+    <div class="max-w-6xl mx-auto flex flex-col sm:flex-row sm:items-center gap-3">
+        <div class="flex-1">
+            <p class="text-sm font-bold text-zinc-100"><span id="shortlist-count">0</span> shortlisted</p>
+            <p id="shortlist-preview" class="text-xs text-zinc-500 mt-0.5 truncate"></p>
+        </div>
+        <div class="flex items-center gap-2">
+            <button type="button" id="shortlist-clear" class="rounded-xl px-3 py-2 text-xs font-bold text-zinc-400 hover:text-rose-300 hover:bg-white/[0.04] transition-all">Clear</button>
+            <button type="button" id="shortlist-compare" class="rounded-xl px-4 py-2 bg-brand-500 text-surface-950 text-xs font-bold hover:bg-brand-400 transition-all btn-press">Compare</button>
+        </div>
+    </div>
+</div>
+
+<div id="compare-modal" class="hidden fixed inset-0 z-[80] overflow-y-auto">
+    <div id="compare-modal-backdrop" class="fixed inset-0 bg-black/80 backdrop-blur-sm"></div>
+    <div class="relative min-h-full flex items-center justify-center p-4">
+        <div class="relative w-full max-w-5xl rounded-2xl glass-strong shadow-2xl shadow-black/50 p-5">
+            <div class="flex items-center justify-between gap-4 mb-4">
+                <div>
+                    <h2 class="text-xl font-extrabold text-zinc-100">Shortlist Compare</h2>
+                    <p class="text-sm text-zinc-500 mt-0.5">Compare the movies you are actually considering.</p>
+                </div>
+                <button type="button" id="compare-close" class="rounded-full p-2 text-zinc-500 hover:text-zinc-100 hover:bg-white/[0.06] transition-all">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                </button>
+            </div>
+            <div id="compare-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"></div>
+        </div>
+    </div>
+</div>
+
 {% else %}
 <div class="text-center py-20">
     <div class="inline-flex items-center justify-center w-20 h-20 rounded-full bg-white/[0.03] mb-5">
@@ -269,7 +339,12 @@ const movieFilter = document.getElementById('movie-filter');
 const movieSort = document.getElementById('movie-sort');
 const movieVisibleCount = document.getElementById('movie-visible-count');
 const pickTonightBtn = document.getElementById('pick-tonight-btn');
-const pickTonightStatus = document.getElementById('pick-tonight-status');
+const decisionPanel = document.getElementById('decision-panel');
+const decisionPicks = document.getElementById('decision-picks');
+const decisionTitle = document.getElementById('decision-title');
+const decisionSummary = document.getElementById('decision-summary');
+const decisionClose = document.getElementById('decision-close');
+let currentWatchModeChoice = 'sure_thing';
 
 function movieCards() {
     return movieGrid ? Array.from(movieGrid.querySelectorAll('.movie-card')) : [];
@@ -304,19 +379,195 @@ if (movieFilter && movieSort) {
     movieSort.addEventListener('change', applyMovieTools);
 }
 
+document.querySelectorAll('.watch-mode-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+        currentWatchModeChoice = btn.dataset.mode || 'sure_thing';
+        document.querySelectorAll('.watch-mode-btn').forEach(other => other.classList.remove('is-active'));
+        btn.classList.add('is-active');
+    });
+});
+
+if (decisionClose) {
+    decisionClose.addEventListener('click', () => decisionPanel.classList.add('hidden'));
+}
+
 if (pickTonightBtn) {
-    pickTonightBtn.addEventListener('click', () => {
-        const visible = movieCards().filter(card => !card.classList.contains('hidden'));
-        if (!visible.length) return;
-        movieCards().forEach(card => card.classList.remove('ring-2', 'ring-brand-400', 'ring-offset-2', 'ring-offset-surface-950'));
-        const pick = visible[Math.floor(Math.random() * visible.length)];
-        pick.classList.add('ring-2', 'ring-brand-400', 'ring-offset-2', 'ring-offset-surface-950');
-        const title = pick.querySelector('h3')?.textContent || 'Selected';
-        pickTonightStatus.textContent = `Tonight: ${title}`;
-        pickTonightStatus.classList.remove('hidden');
-        pick.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    pickTonightBtn.addEventListener('click', async () => {
+        pickTonightBtn.disabled = true;
+        const originalText = pickTonightBtn.textContent;
+        pickTonightBtn.textContent = 'Deciding...';
+        try {
+            const resp = await fetch(`/api/collections/{{ collection.id }}/picks?mode=${encodeURIComponent(currentWatchModeChoice)}&limit=3`);
+            if (!resp.ok) throw new Error('Could not decide from this collection');
+            const payload = await resp.json();
+            renderDecisionPanel(payload);
+        } catch (e) {
+            decisionTitle.textContent = 'Could not pick tonight';
+            decisionSummary.textContent = e.message || 'Try again in a moment.';
+            decisionPicks.innerHTML = '';
+            decisionPanel.classList.remove('hidden');
+        } finally {
+            pickTonightBtn.disabled = false;
+            pickTonightBtn.textContent = originalText;
+        }
     });
 }
+
+function renderDecisionPanel(payload) {
+    const picks = payload.picks || [];
+    decisionTitle.textContent = `${payload.mode_label || 'Tonight'} picks`;
+    const stats = payload.stats || {};
+    const avg = stats.average_rating ? `Avg ${Number(stats.average_rating).toFixed(1)}` : 'No average rating yet';
+    const span = stats.year_span ? ` · ${stats.year_span}` : '';
+    decisionSummary.textContent = `${avg}${span} · ${stats.explained_count || 0} explained picks`;
+    decisionPicks.innerHTML = '';
+    movieCards().forEach(card => card.classList.remove('ring-2', 'ring-brand-400', 'ring-offset-2', 'ring-offset-surface-950'));
+
+    picks.forEach((pick, idx) => {
+        const card = document.createElement('button');
+        card.type = 'button';
+        card.className = 'text-left rounded-xl bg-black/20 border border-white/[0.08] p-3 hover:border-brand-400/40 hover:bg-white/[0.05] transition-all';
+        card.innerHTML = `
+            <div class="flex items-start justify-between gap-3 mb-2">
+                <div>
+                    <p class="text-sm font-extrabold text-zinc-100">${idx === 0 ? 'Tonight: ' : ''}${escapeHtml(pick.title)}</p>
+                    <p class="text-xs text-zinc-500 mt-0.5">${[pick.year || '', pick.rating ? `${Number(pick.rating).toFixed(1)} rating` : '', `${pick.score}/100 fit`].filter(Boolean).join(' · ')}</p>
+                </div>
+                <span class="shrink-0 rounded-full bg-brand-500/15 border border-brand-400/25 px-2 py-0.5 text-[10px] font-black text-brand-200">${pick.score}</span>
+            </div>
+            <p class="text-xs text-zinc-300 leading-relaxed">${escapeHtml(pick.why || '')}</p>
+            ${pick.match_reason ? `<p class="mt-2 text-xs text-brand-200 leading-relaxed">${escapeHtml(pick.match_reason)}</p>` : ''}
+        `;
+        card.addEventListener('click', () => {
+            const target = movieCards().find(movieCard => String(movieCard.dataset.movieId || movieCard.querySelector('.shortlist-btn')?.dataset.movieId) === String(pick.id));
+            if (target) {
+                highlightMovieCard(target);
+                target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+        });
+        decisionPicks.appendChild(card);
+    });
+
+    if (picks[0]) {
+        const first = movieCards().find(card => String(card.querySelector('.shortlist-btn')?.dataset.movieId) === String(picks[0].id));
+        if (first) highlightMovieCard(first);
+    }
+    decisionPanel.classList.remove('hidden');
+}
+
+function highlightMovieCard(card) {
+    movieCards().forEach(item => item.classList.remove('ring-2', 'ring-brand-400', 'ring-offset-2', 'ring-offset-surface-950'));
+    card.classList.add('ring-2', 'ring-brand-400', 'ring-offset-2', 'ring-offset-surface-950');
+}
+
+// Shortlist and compare
+const shortlistKey = 'flickvault:shortlist:{{ collection.id }}';
+const compareDrawer = document.getElementById('compare-drawer');
+const shortlistCount = document.getElementById('shortlist-count');
+const shortlistPreview = document.getElementById('shortlist-preview');
+const shortlistClear = document.getElementById('shortlist-clear');
+const shortlistCompare = document.getElementById('shortlist-compare');
+const compareModal = document.getElementById('compare-modal');
+const compareGrid = document.getElementById('compare-grid');
+const compareClose = document.getElementById('compare-close');
+const compareBackdrop = document.getElementById('compare-modal-backdrop');
+
+function readShortlist() {
+    try {
+        return JSON.parse(localStorage.getItem(shortlistKey) || '[]');
+    } catch {
+        return [];
+    }
+}
+
+function writeShortlist(items) {
+    localStorage.setItem(shortlistKey, JSON.stringify(items.slice(0, 8)));
+    syncShortlist();
+}
+
+function movieDataFromCard(card) {
+    return {
+        id: parseInt(card.dataset.movieId),
+        title: card.dataset.displayTitle || card.querySelector('h3')?.textContent || 'Unknown',
+        year: parseInt(card.dataset.year || '0') || null,
+        rating: parseFloat(card.dataset.rating || '0') || null,
+        poster_url: card.dataset.poster || '',
+        overview: card.dataset.overview || '',
+        match_reason: card.dataset.reason || '',
+    };
+}
+
+function toggleShortlist(event, movieId, btn) {
+    event.preventDefault();
+    event.stopPropagation();
+    const card = btn.closest('.movie-card');
+    if (!card) return;
+    const current = readShortlist();
+    const exists = current.some(item => item.id === movieId);
+    const next = exists
+        ? current.filter(item => item.id !== movieId)
+        : [...current, movieDataFromCard(card)];
+    writeShortlist(next);
+}
+
+function syncShortlist() {
+    const items = readShortlist();
+    const ids = new Set(items.map(item => String(item.id)));
+    document.querySelectorAll('.shortlist-btn').forEach(btn => {
+        btn.classList.toggle('is-selected', ids.has(String(btn.dataset.movieId)));
+    });
+    if (!compareDrawer) return;
+    compareDrawer.classList.toggle('hidden', items.length === 0);
+    shortlistCount.textContent = String(items.length);
+    shortlistPreview.textContent = items.map(item => item.title).join(' · ');
+    shortlistCompare.disabled = items.length === 0;
+}
+
+function openCompareModal() {
+    const items = readShortlist();
+    compareGrid.innerHTML = '';
+    items.forEach(item => {
+        const card = document.createElement('div');
+        card.className = 'rounded-xl bg-black/20 border border-white/[0.08] overflow-hidden';
+        card.innerHTML = `
+            ${item.poster_url ? `<img src="${escapeHtml(item.poster_url)}" alt="${escapeHtml(item.title)}" class="w-full h-52 object-cover">` : '<div class="h-20 bg-surface-850"></div>'}
+            <div class="p-4">
+                <div class="flex items-start justify-between gap-3">
+                    <h3 class="text-base font-extrabold text-zinc-100 leading-tight">${escapeHtml(item.title)}</h3>
+                    <button type="button" class="text-xs font-bold text-zinc-500 hover:text-rose-300" data-remove-id="${item.id}">Remove</button>
+                </div>
+                <p class="text-xs text-zinc-500 mt-1">${[item.year || '', item.rating ? `${Number(item.rating).toFixed(1)} rating` : ''].filter(Boolean).join(' · ')}</p>
+                ${item.match_reason ? `<p class="mt-3 text-sm text-brand-200 leading-relaxed">${escapeHtml(item.match_reason)}</p>` : ''}
+                ${item.overview ? `<p class="mt-3 text-sm text-zinc-400 leading-relaxed line-clamp-4">${escapeHtml(item.overview)}</p>` : ''}
+            </div>
+        `;
+        compareGrid.appendChild(card);
+    });
+    compareGrid.querySelectorAll('[data-remove-id]').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const id = parseInt(btn.dataset.removeId);
+            writeShortlist(readShortlist().filter(item => item.id !== id));
+            openCompareModal();
+        });
+    });
+    compareModal.classList.remove('hidden');
+    document.body.style.overflow = 'hidden';
+}
+
+function closeCompareModal() {
+    compareModal.classList.add('hidden');
+    document.body.style.overflow = '';
+}
+
+if (shortlistClear) {
+    shortlistClear.addEventListener('click', () => writeShortlist([]));
+}
+if (shortlistCompare) {
+    shortlistCompare.addEventListener('click', openCompareModal);
+}
+if (compareClose) compareClose.addEventListener('click', closeCompareModal);
+if (compareBackdrop) compareBackdrop.addEventListener('click', closeCompareModal);
+syncShortlist();
 
 // Movie detail modal
 const movieModal = document.getElementById('movie-modal');
@@ -706,6 +957,8 @@ if (modalBackdrop) modalBackdrop.addEventListener('click', closeMovieModal);
 document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape' && movieModal && !movieModal.classList.contains('hidden')) {
         closeMovieModal();
+    } else if (e.key === 'Escape' && compareModal && !compareModal.classList.contains('hidden')) {
+        closeCompareModal();
     }
 });
 </script>

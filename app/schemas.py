@@ -44,6 +44,9 @@ class CollectionOut(BaseModel):
     created_at: datetime
     updated_at: datetime
     movie_count: int = 0
+    average_rating: float | None = None
+    highest_rating: float | None = None
+    year_span: str = ""
 
     model_config = {"from_attributes": True}
 

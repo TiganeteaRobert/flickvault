@@ -3,6 +3,7 @@ from sqlalchemy.orm import Session, aliased, joinedload
 
 from app.models import Collection, Movie, CollectionMovie
 from app.schemas import CollectionCreate, CollectionUpdate, MovieCreate
+from app.watch_decider import round_one_decimal, summarize_collection
 
 
 # --- Collections ---
@@ -22,9 +23,14 @@ def get_collections(db: Session, user_id: int) -> list[dict]:
             Collection,
             ParentCollection.name.label("parent_name"),
             func.count(CollectionMovie.id).label("movie_count"),
+            func.avg(Movie.rating).label("average_rating"),
+            func.max(Movie.rating).label("highest_rating"),
+            func.min(Movie.year).label("min_year"),
+            func.max(Movie.year).label("max_year"),
         )
         .select_from(Collection)
         .outerjoin(CollectionMovie, CollectionMovie.collection_id == Collection.id)
+        .outerjoin(Movie, Movie.id == CollectionMovie.movie_id)
         .outerjoin(ParentCollection, Collection.parent_id == ParentCollection.id)
         .filter(Collection.user_id == user_id)
         .group_by(Collection.id, ParentCollection.name)
@@ -32,7 +38,7 @@ def get_collections(db: Session, user_id: int) -> list[dict]:
         .all()
     )
     results = []
-    for collection, parent_name, count in rows:
+    for collection, parent_name, count, average_rating, highest_rating, min_year, max_year in rows:
         results.append({
             "id": collection.id,
             "name": collection.name,
@@ -45,6 +51,9 @@ def get_collections(db: Session, user_id: int) -> list[dict]:
             "updated_at": collection.updated_at,
             "movie_count": count,
             "poster_urls": [],
+            "average_rating": round_one_decimal(float(average_rating)) if average_rating is not None else None,
+            "highest_rating": float(highest_rating) if highest_rating is not None else None,
+            "year_span": _year_span(min_year, max_year),
         })
 
     # Fetch up to 4 poster URLs per collection in a single query
@@ -93,7 +102,7 @@ def get_collection_with_movies(db: Session, collection_id: int, user_id: int) ->
         .all()
     )
     movies = [_movie_with_collection_data(cm) for cm in cms]
-    return {
+    result = {
         "id": collection.id,
         "name": collection.name,
         "description": collection.description,
@@ -105,6 +114,8 @@ def get_collection_with_movies(db: Session, collection_id: int, user_id: int) ->
         "movie_count": len(movies),
         "movies": movies,
     }
+    result["stats"] = summarize_collection(result)
+    return result
 
 
 def update_collection(db: Session, collection_id: int, data: CollectionUpdate, user_id: int) -> Collection | None:
@@ -276,6 +287,16 @@ def _movie_with_collection_data(cm: CollectionMovie) -> dict:
         "match_reason": cm.match_reason or "",
         "sort_order": cm.sort_order,
     }
+
+
+def _year_span(min_year: int | None, max_year: int | None) -> str:
+    if not min_year and not max_year:
+        return ""
+    if min_year == max_year or not max_year:
+        return str(min_year)
+    if not min_year:
+        return str(max_year)
+    return f"{min_year}-{max_year}"
 
 
 def add_movies_batch(db: Session, collection_id: int, movies_data: list[MovieCreate], user_id: int) -> dict:
